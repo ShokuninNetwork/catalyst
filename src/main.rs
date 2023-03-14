@@ -1,7 +1,5 @@
-use actix_files::Files;
-use actix_web::{get, post, web, HttpResponse, Responder, HttpServer, App, middleware, http::header::ContentDisposition};
+use actix_web::{get, post, web, HttpResponse, Responder, HttpServer, App, middleware, http::header::{ContentDisposition, ContentEncoding}};
 use base64::{engine::general_purpose, Engine};
-use include_repo::include_repo_gz;
 use rand::{seq::SliceRandom, thread_rng};
 use ring::{
     digest::{self, SHA256},
@@ -9,8 +7,14 @@ use ring::{
 };
 use serde::{Deserialize, Serialize};
 use serde_json::{json};
-use std::{fs, path::PathBuf, io::Read, time::{SystemTime, Duration}, collections::HashMap};
+use std::{fs, path::PathBuf, io::Read, time::{SystemTime, Duration}, collections::HashMap, process::Output, sync::{Arc, Mutex}};
+use std::process::Command;
+use lazy_static::lazy_static;
 
+
+lazy_static! {
+    static ref TAR_GZ: Arc<Mutex<Option<Vec<u8>>>> = Arc::new(Mutex::new(None));
+}
 
 #[get("/")]
 async fn index_page() -> impl Responder {
@@ -975,15 +979,28 @@ async fn get_current_bin() -> impl Responder {
 }
 
 #[get("/src")]
-async fn get_current_bin() -> impl Responder {
-    if let Ok(current_exe) = std::env::current_exe() {
-        let filename = current_exe.file_name().unwrap().to_string_lossy();
-        return HttpResponse::Ok()
-            .content_type("application/octet-stream")
-            .append_header(ContentDisposition::attachment("src.tar.gz"))
-            .body(include_repo_gz!());
+async fn get_current_src() -> impl Responder {
+    if let Ok(mutex) = TAR_GZ.lock() {
+        if let Some(tar_gz) = mutex.as_ref() {
+            return HttpResponse::Ok().body(tar_gz.clone());
+        }
     }
-    HttpResponse::InternalServerError().into()
+
+    let output = Command::new("git")
+        .args(&["archive", "--format=tar.gz", "HEAD"])
+        .current_dir(".")
+        .output()
+        .expect("failed to execute git command");
+
+    let tar_gz = output.stdout;
+    let mut mutex = TAR_GZ.lock().unwrap();
+    *mutex = Some(tar_gz.clone());
+
+    HttpResponse::Ok()
+        .content_type("application/x-gtar")
+        .append_header(ContentEncoding::Gzip)
+        .append_header(ContentDisposition::attachment("src.tar.gz"))
+        .body(tar_gz)
 }
 
 
@@ -1001,6 +1018,7 @@ async fn main() -> std::io::Result<()> {
             .service(get_post_by_id)
             .service(get_random_posts)
             .service(get_current_bin)
+            .service(get_current_src)
 
     })
     .bind(("127.0.0.1", 8080))?

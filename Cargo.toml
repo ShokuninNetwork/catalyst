@@ -13,7 +13,5 @@ ring = "0.16.20"
 base64 = "0.21.0"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-parity-scale-codec = "3.4.0"
-parity-scale-codec-derive = "3.1.4"
 rand = "0.8.5"
-include-repo = "1.0.0"
+lazy_static = "1.4.0"
