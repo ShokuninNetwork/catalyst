@@ -1,13 +1,12 @@
 use actix_web::{get, post, web, HttpResponse, Responder, HttpServer, App, middleware, http::header::{ContentDisposition, ContentEncoding}};
 use base64::{engine::general_purpose, Engine};
-use rand::{seq::SliceRandom, thread_rng};
 use ring::{
     digest::{self, SHA256},
     signature::{self, UnparsedPublicKey},
 };
 use serde::{Deserialize, Serialize};
 use serde_json::{json};
-use std::{fs, path::PathBuf, io::Read, time::{SystemTime, Duration}, collections::HashMap, process::Output, sync::{Arc, Mutex}};
+use std::{fs, path::PathBuf, io::Read, time::{SystemTime, Duration}, collections::HashMap, sync::{Arc, Mutex}};
 use std::process::Command;
 use lazy_static::lazy_static;
 
@@ -25,170 +24,10 @@ async fn index_page() -> impl Responder {
         <head>
         <meta charset="UTF-8">
         <title>Catalyst</title>
-        <link rel="icon" href="/icon.svg"/>
-        <link rel="manifest" href="/manifest.json"/>
-            <style>
-            body {
-                background-image: url( '/icon.svg' ), url( '/icon_text.svg' ), linear-gradient(to bottom right, white, rgba(23, 11, 40, 0.3));
-                background-position: top left, 12% 2%, top left;
-                background-size: 8%, 20%, 130vw 130vh;
-                background-repeat: no-repeat, no-repeat, no-repeat;
-                overflow-x: hidden;
-                overflow-y: hidden;
-                font-family: "URW Gothic", sans-serif;
-            }
-
-            /* Define a style for the post container */
-            .post-container {
-                position: absolute;
-                width: 100%;
-                height: 100%;
-                display: flex;
-                gap: 10px;
-                padding: 10px;
-                transition: width 0.3s ease-in-out;
-                align-items: center;
-                flex-direction: column;
-                justify-content: flex-start;
-                overflow-x: hidden;
-                overflow-y: auto;
-                font-family: inherit;
-            }
-
-            .app-container {
-                overflow-x: hidden;
-                overflow-y: hidden;
-            }
-
-
-            /* Define a style for the posts */
-            .post {
-                font-size: 1.5em;
-                background-color: #ffffff;
-                border: 1px solid #dddddd;
-                border-radius: 5px;
-                box-shadow: 0px 2px 4px rgba(23, 11, 40, 0.3);
-                padding: 10px;
-                width: calc(85% - 10px);
-                font-family: inherit;
-            }
-
-            /* Define a style for the post title */
-            .post-title {
-                font-size: 2em;
-                font-weight: bold;
-                margin-bottom: 10px;
-            }
-
-            /* Define a style for the post author */
-            .post-author {
-                font-size: 1em;
-                color: #442178;
-                margin-bottom: 10px;
-            }
-
-            /* Define a style for the post content */
-            .post-content {
-                line-height: 2.5;
-                color: #170b28;
-            }
-
-            @media (min-width: 1080px) {
-            .right-side {
-                    position: absolute;
-                    top: 0;
-                    width: 50vw;
-                    height: 100vh;
-                    background-color: rgba(23, 11, 40, 0.5);
-                    display: flex;
-                    flex-direction: column;
-                    justify-content: center;
-                    align-items: center;
-                    z-index: 999;
-                }
-                .hidden {
-                    transform: translateX(150%);
-                    visibility: hidden;
-                }
-                .shown {
-                    visibility: visible;
-                    transform: translateX(100%);
-                }
-                /* Define a style for the secondary button */
-                button {
-                    display: inline-block;
-                    padding: 5px 10px;
-                    border: 1px solid #8d5fd3;
-                    border-radius: 0.5em;
-                    font-size: 1em;
-                    font-weight: bold;
-                    text-align: center;
-                    text-decoration: none;
-                    background-color: #ffffff;
-                    color: #8d5fd3;
-                    cursor: pointer;
-                    z-index: 999;
-                    transition: background-color 0.2s ease-in-out;
-                }
-            }
-
-            @media (max-width: 1079px) {
-                .right-side {
-                        position: absolute;
-                        top: 0;
-                        left: 0;
-                        width: 100%;
-                        height: 100%;
-                        background-color: rgba(23, 11, 40, 0.5);
-                        display: flex;
-                        flex-direction: column;
-                        justify-content: center;
-                        align-items: center;
-                        z-index: 999;
-                    }
-                    .hidden {
-                        visibility: hidden;
-                    }
-                    .shown {
-                        visibility: visible;
-                    }
-                    /* Define a style for the secondary button */
-                    button {
-                        display: inline-block;
-                        padding: 9px 19px;
-                        border: 1px solid #8d5fd3;
-                        border-radius: 0.8em;
-                        font-size: 1.5em;
-                        font-weight: bold;
-                        text-align: center;
-                        text-decoration: none;
-                        background-color: #ffffff;
-                        color: #8d5fd3;
-                        cursor: pointer;
-                        z-index: 999;
-                        transition: background-color 0.2s ease-in-out;
-                    }
-                }
-          
-            /* Define a style for the post editor textarea */
-            .post-editor #editor-content {
-              width: calc(100% - 2em);
-              height: 95%;
-              padding: 1em;
-              border: none;
-              border-radius: 0.5em;
-              background-color: #ffffff;
-              font-size: 1.5em;
-              line-height: 1.5;
-            }
-          
-            /* Define a style for the secondary button when hovered */
-            button:hover {
-              background-color: #c6afe9;
-            }
-            
-            </style>
-            <meta name="viewport" width="device-width" initial-scale="1" interactive-widget="resizes-content">
+        <link rel="icon" href="/icon.svg">
+        <link rel="manifest" href="/manifest.json">
+        <link rel="stylesheet" href="/style.css" type="text/css">
+        <meta name="viewport" width="device-width" initial-scale="1" interactive-widget="resizes-content">
         </head>
         <body>
         <div class="app-container">
@@ -217,349 +56,7 @@ async fn index_page() -> impl Responder {
             </div>
         </div>
         </body>
-            <script>
-
-                const editorContainer = document.querySelector('.post-editor');
-                const postEditor = document.querySelector('.post-editor #editor-content');
-                const previewContainer = document.querySelector('.post-previewer');
-                const previewPost = document.querySelector('.preview-post');
-                const postContainer = document.querySelector('.post-container');
-                const isWideWindow = window.matchMedia('(min-width: 1080px)');
-
-                // Get the user preferences from localStorage or set defaults
-                const storedPreferences = localStorage.getItem('userPreferences');
-                const userPrefs = storedPreferences ? JSON.parse(storedPreferences) : {
-                    maxPosts: 10,
-                    recencyDays: 30
-                };
-
-                localStorage.setItem('userPreferences', JSON.stringify(userPrefs));
-
-
-                // Helper function to get the ID of the parent post element
-                function getPostID(element) {
-                    while (element && !element.classList.contains('post')) {
-                        element = element.parentElement;
-                    }
-                    return element ? element.id : null;
-                }
-
-
-
-                function postRenderer(postContentElement, postContent) {
-                    postContentElement.setHTML
-                      ? postContentElement.setHTML(postContent)
-                      : /<\/?[a-z][\s\S]*>/i.test(postContent)
-                        ? ((postContentElement.innerHTML = "<b><a href='https://developer.mozilla.org/en-US/docs/Web/API/HTML_Sanitizer_API#browser_compatibility' target='_blank'>unsupported browser</a>, rendering in text mode: </b><br/>"), postContentElement.appendChild(document.createTextNode(postContent)))
-                        : (postContentElement.innerHTML = postContent);
-                }
-
-                function postConstructor(postObject) {
-                    const post = document.createElement('div');
-                    const title = document.createElement('div');
-                    const author = document.createElement('div');
-                    const content = document.createElement('div');
-                    post.classList.add('post');
-                    title.classList.add('post-title');
-                    author.classList.add('post-author');
-                    content.classList.add('post-content');
-                    postRenderer(title, postObject.title);
-                    postRenderer(author, postObject.author);
-                    postRenderer(content, postObject.content);
-                    post.appendChild(title);
-                    post.appendChild(author);
-                    post.appendChild(content);
-                    post.id = postObject.postID;
-                    post.signature = postObject.signature
-                    return post;
-                }
-
-                async function appendPost(postID) {
-                    const postResponse = await fetch(`/post/${postID}`);
-                    if (!postResponse.ok) {
-                      console.error(`Failed to load post ${postID}`);
-                      return;
-                    }
-
-                    const postObject = await postResponse.json();
-                    postObject.postID = postID;
-                    const post = postConstructor(postObject);
-                    const postsStartMarker = document.getElementById('posts-start-marker');
-                    postContainer.insertBefore(post, postsStartMarker.nextSibling);
-
-                    // Check if the number of posts in the post container has exceeded the maxPosts limit
-                    const maxPosts = userPrefs.maxPosts || 10;
-                    if (postContainer.children.length > maxPosts+2) {
-                      // Remove the last post from the container
-                      postContainer.removeChild(postContainer.lastChild);
-                    }
-                }
-
-                async function getUnfilteredAnchors(postId) {
-                    const response = await fetch(`/post/${postId}/unfiltered_anchors`);
-                    if (!response.ok) {
-                      throw new Error(`Failed to fetch unfiltered anchors for post ${postId}: ${response.status} ${response.statusText}`);
-                    }
-                    const anchorJson = await response.json();
-                    return anchorJson.map(anchor => ({
-                      linkId: anchor.link_id,
-                      postId: anchor.post_id,
-                      reference: anchor.reference,
-                      referencingPostId: anchor.referencing_post_id,
-                    }));
-                  }
-                  
-                  async function getFilteredAnchors(postId) {
-                    const response = await fetch(`/post/${postId}/anchors?max_posts=${userPrefs.maxPosts}&recency_days=${userPrefs.recencyDays}`);
-                    if (!response.ok) {
-                      throw new Error(`Failed to fetch filtered anchors for post ${postId}: ${response.status} ${response.statusText}`);
-                    }
-                    const anchorJson = await response.json();
-                    return anchorJson.map(anchor => ({
-                      linkId: anchor.link_id,
-                      postId: anchor.post_id,
-                      reference: anchor.reference,
-                      referencingPostId: anchor.referencing_post_id,
-                    }));
-                  }
-
-                  function insertTextAtCursor(textarea, text) {
-                    // Get the current cursor position
-                    const startPos = textarea.selectionStart;
-                    const endPos = textarea.selectionEnd;
-                  
-                    // Insert the text at the current cursor position
-                    textarea.value = textarea.value.substring(0, startPos) + text + textarea.value.substring(endPos);
-                  
-                    // Set the new cursor position
-                    textarea.selectionStart = startPos + text.length;
-                    textarea.selectionEnd = startPos + text.length;
-                  
-                    // Set the focus back to the textarea
-                    textarea.focus();
-                  }                 
-
-                // Define a function to load posts from the backend API
-                async function loadPosts() {
-                    // Set the query parameters based on the user preferences
-                    const queryParams = `?max_posts=${userPrefs.maxPosts}&recency_days=${userPrefs.recencyDays}`;
-
-                    // Fetch the list of posts from the backend API
-                    const response = await fetch(`/posts${queryParams}`);
-                    const posts = await response.json();
-                    // Get an array of post IDs
-                    const postIDs = Object.keys(posts);  
-
-                    // Loop over the posts and create elements for each one
-                    postIDs.forEach(postID => {
-                        // add the ID to the post object.
-                        post = posts[postID];
-                        post.postID = postID;
-                        // Create a div element for the post
-                        const postDiv = postConstructor(post);
-
-                        // Add the post div to the post container
-                        postContainer.appendChild(postDiv);
-                    });
-                }
-
-                // Call the function to load the posts into the post container
-                loadPosts();
-
-                // Add a button element to start creating a transformation
-                        postContainer.addEventListener('mouseup', event => {
-                        const postID = getPostID(event.target);
-                        const selection = window.getSelection();
-                        const selectedText = selection.toString().trim();
-                            if (selectedText) {
-                                // Copy selection to editor
-                                const postID = getPostID(event.target);
-                                const linkID = `${postID}${Math.random().toString(36).substring(8)}`; // Generate a unique ID for the link
-                                const link = document.createElement('a');
-                                link.href = `#${linkID}`;
-                                link.innerText = selectedText;
-                                insertTextAtCursor(postEditor, link.outerHTML);
-                                // Save the link ID and start/end positions of the selected text
-                                const postDiv = document.getElementById(postID);
-                                const start = postDiv.innerText.indexOf(selectedText);
-                                const end = start + selectedText.length;
-
-                                //Anchor Format: link_id, post_id, reference, referencing_post_id
-                                //Reference Format: (post_start, post_end, ref_start, ref_end)
-                                // we have link_id, post_id, (post_start, post_end) at this point in time
-                                // we will only have (ref_start, ref_end) and referencing_post_id once the
-                                // referencing post has been saved.
-                                postEditor.temp = postEditor.temp ? postEditor.temp : {};
-                                postEditor.temp.pendingAnchors =
-                                    postEditor.temp.pendingAnchors ?
-                                    postEditor.temp.pendingAnchors :
-                                    [];
-                                postEditor.temp.pendingAnchors.push({
-                                    link_id: linkID,
-                                    post_id: postID,
-                                    post_start: start,
-                                    post_end: end,
-                                });
-                            }
-                        });
-
-
-                  document.addEventListener('click', () => {
-                    const isToggleBtn = event.target.classList.contains('toggle-button');
-                    const isPreviewBtn = event.target.classList.contains('preview-button');
-
-                  
-                    if (isToggleBtn || isPreviewBtn) {
-                      const container = isToggleBtn ? editorContainer : previewContainer;
-                      const isHidden = container.classList.contains('hidden');
-                  
-                      if (isHidden) {
-                        container.classList.remove('hidden');
-                        container.classList.add('shown');
-                        if (isWideWindow.matches){
-                            postContainer.style.width = '50%'
-                        }
-                        if (!isToggleBtn) {
-                          const previewContent = postEditor.value;
-                          postRenderer(previewPost, previewContent);
-                        }
-                      } else {
-                        container.classList.add('hidden');
-                        container.classList.remove('shown');
-                        if (!isPreviewBtn) {
-                            postContainer.style.width = '100%'
-                        }
-                      }
-                    }
-                  });
-                
-
-                  // Get a reference to the save button
-                  const saveButton = document.querySelector('.save-button');
-                  
-                  // Add a click event listener to the save button
-                  saveButton.addEventListener('click', async () => {
-                    const postTitle = document.querySelector('.post-editor #editor-title');
-                    const postAuthor = document.querySelector('.post-editor #editor-author');
-                    const transformedText = postEditor.value;
-                    const transformedTitle = postTitle.value;
-                    const transformedAuthor = postAuthor.value;
-                    // Create a new post object with the transformed text
-                    const newPost = {
-                      title: transformedTitle,
-                      author: transformedAuthor,
-                      content: transformedText,
-                      signature: []
-                    };
-                  
-                    // Send the new post object to the '/post' endpoint
-                    const response = await fetch('/post', {
-                      method: 'POST',
-                      headers: {
-                        'Content-Type': 'application/json'
-                      },
-                      body: JSON.stringify(newPost)
-                    });
-                  
-                    // Get the post ID from the response and log it to the console
-                    const data = await response.json();
-                    const postID = data.postID;
-                    console.log(`New post created with ID: ${postID}`);
-
-                    if(postEditor.temp)if(postEditor.temp.pendingAnchors)postEditor.temp.pendingAnchors.forEach(pendingAnchor => {
-                        
-                        let postRendered = document.createElement("div");
-                        const previewContent = postEditor.value;
-                        postRenderer(postRendered, previewContent);
-                        let query = "a[href='#"+pendingAnchor.link_id+"']";
-                        let reference = postRendered.querySelector(query);
-                        let referenceText = reference?reference.innerText:"";
-                        let refStart = postRendered.innerText.indexOf(referenceText);
-                        let refEnd = refStart + referenceText.length;
-                        
-                        let newAnchor = {
-                            link_id: pendingAnchor.link_id,
-                            post_id: pendingAnchor.post_id,
-                            reference: pendingAnchor.post_start+":"+pendingAnchor.post_end+":"+refStart+":"+refEnd,
-                            referencing_post_id: postID
-                        }
-
-                        // Send the new anchor object to the '/anchor' endpoint
-                        const responsePromise = fetch('/anchor', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify(newAnchor)
-                        });
-
-                    });
-                  
-                    clearPost();
-                    appendPost(postID);
-                  });
-
-
-                function clearPost() {
-                    const postTitle = document.querySelector('.post-editor #editor-title');
-                    const postAuthor = document.querySelector('.post-editor #editor-author');
-                    // Clear the post editor
-                    postEditor.value = '';
-                    postTitle.value = '';
-                    postAuthor.value = '';
-                    delete postEditor.temp;
-                    postEditor.readOnly = false;
-                    postAuthor.readOnly = false;
-                }
-
-                  // Click handler function for the sign button
-                async function signPost() {
-                    // Get the post content from a variable in-scope
-                    const postAuthor = document.querySelector('.post-editor #editor-author');
-
-                    // Check if there is an existing keypair in localStorage
-                    let localStorageKeypair = localStorage.getItem("keypair");
-                    let keypair = localStorageKeypair ? 
-                    await crypto.subtle.importKey(
-                        "jwk", 
-                        localStorageKeypair, 
-                        { name: "ED25519", namedCurve: "ed25519" },
-                        true,
-                        ["sign", "verify"]): 
-                    await crypto.subtle.generateKey(
-                        { name: "ED25519", namedCurve: "ed25519" },
-                        true,
-                        ["sign", "verify"]);
-                    localStorage.setItem("keypair", await crypto.subtle.exportKey("jwk", keypair));
-
-                    // create an "aka" element which is appended to the post,
-                    // holding the non-cryptographic author name
-                    let aka = document.createElement('div');
-                    if(postAuthor.value){
-                        aka.classList.add('aka');
-                        aka.value = postAuthor.value;
-                        postEditor.value += aka.outerHTML
-                    }
-                    // Replace author with base64 of the pubkey
-                    postAuthor.value = btoa(
-                        String.fromCharCode(
-                            ...new Uint8Array(await crypto.subtle.exportKey("spki", keypair)
-                        )
-                    );
-
-                    // Sign the post content using the keypair
-                    const signature = await crypto.subtle.sign(
-                        { name: "ED25519" },
-                        keypair.privateKey,
-                        new TextEncoder().encode(postEditor.value)
-                    );
-
-                    // Store the signature in a variable waiting for post submission
-                    if(!postEditor.temp){postEditor.temp = {}}
-                    postEditor.temp.signature = new Uint8Array(signature);
-                    postEditor.readOnly = true;
-                    postAuthor.readOnly = true;
-                }
+            <script src="/script.js">
             </script>
         </html>
         "#,
@@ -725,7 +222,7 @@ async fn create_post(mut post: web::Json<Post>) -> impl Responder {
         Err(_) => {
             // Author labelled as anonymous if public key not provided
             post.author = String::from("Unverified: ")+&post.author.clone();
-            post_id_str = format!("unverified_{}", post.author.clone());
+            post_id_str = format!("unverified_{}", general_purpose::URL_SAFE_NO_PAD.encode(post_id.as_ref()));
         },
     }
 
@@ -835,7 +332,7 @@ struct PostQuery {
 }
 
 #[get("/posts")]
-async fn get_random_posts(web::Query(query): web::Query<PostQuery>) -> impl Responder {
+async fn get_posts(web::Query(query): web::Query<PostQuery>) -> impl Responder {
     let recency_days = query.recency_days.unwrap_or(7);
     let max_posts = query.max_posts.unwrap_or(10);
 
@@ -863,13 +360,11 @@ async fn get_random_posts(web::Query(query): web::Query<PostQuery>) -> impl Resp
         })
         .collect::<Vec<_>>();
 
-    // Select a random subset of post directories
-    let mut rng = thread_rng();
-    let random_post_dirs = recent_post_dirs.choose_multiple(&mut rng, max_posts);
+    let selected_post_dirs = recent_post_dirs.into_iter().take(max_posts);
 
     // Read the post data from each selected post directory
     let mut posts = HashMap::new();
-    for post_dir in random_post_dirs {
+    for post_dir in selected_post_dirs {
         let post_file = post_dir.path().join("post.json");
         let mut file = match fs::File::open(&post_file) {
             Ok(file) => file,
@@ -945,13 +440,11 @@ async fn get_anchors(
         })
         .collect::<Vec<_>>();
 
-    // Select a random subset of anchor directories
-    let mut rng = thread_rng();
-    let random_anchor_dirs = recent_anchor_dirs.choose_multiple(&mut rng, max_anchors);
+    let selected_anchor_dirs = recent_anchor_dirs.into_iter().take(max_anchors);
 
     // Read the anchor data from each selected anchor directory
     let mut anchors = vec![];
-    for anchor_dir in random_anchor_dirs {
+    for anchor_dir in selected_anchor_dirs {
         let anchor_file = anchor_dir.path().join("anchor.json");
         let mut file = fs::File::open(&anchor_file).unwrap();
         let mut anchor_json = String::new();
@@ -962,6 +455,554 @@ async fn get_anchors(
 
     HttpResponse::Ok().json(anchors)
 }
+
+#[get("/post/{post_id}/linked_posts")]
+async fn linked_posts(post_id: web::Path<String>) -> impl Responder {
+    // Open the post
+    let post_path = PathBuf::from("./posts").join(post_id.into_inner());
+
+    // Open the links file and gather linked post data
+    let links_file = post_path.join("links.json");
+    let linked_post_ids: Vec<String> = match fs::read_to_string(&links_file) {
+        Ok(data) => serde_json::from_str(&data).unwrap_or_default(),
+        Err(_) => vec![],
+    };
+    let mut linked_posts = HashMap::new();
+    for id in linked_post_ids {
+        let linked_post_path = PathBuf::from("./posts").join(&id);
+        let linked_post_file = linked_post_path.join("post.json");
+        let linked_post_data = match fs::read_to_string(&linked_post_file) {
+            Ok(data) => data,
+            Err(_) => continue,
+        };
+        let linked_post: Post = match serde_json::from_str(&linked_post_data) {
+            Ok(post) => post,
+            Err(_) => continue,
+        };
+        linked_posts.insert(id, linked_post);
+    }
+
+    // Return the linked post data
+    HttpResponse::Ok().json(linked_posts)
+}
+
+#[get("/style.css")]
+async fn get_style() -> impl Responder {
+    HttpResponse::Ok()
+    .append_header(("Content-Type", "text/css"))
+    .body(
+        r####"@charset "UTF-8";
+    body {
+        background-image: url( '/icon.svg' ), url( '/icon_text.svg' ), linear-gradient(to bottom right, white, rgba(23, 11, 40, 0.3));
+        background-position: top left, 12% 2%, top left;
+        background-size: 8%, 20%, 130vw 130vh;
+        background-repeat: no-repeat, no-repeat, no-repeat;
+        overflow-x: hidden;
+        overflow-y: hidden;
+        font-family: "URW Gothic", sans-serif;
+    }
+
+    /* Define a style for the post container */
+    .post-container {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        display: flex;
+        gap: 10px;
+        padding: 10px;
+        transition: width 0.3s ease-in-out;
+        align-items: center;
+        flex-direction: column;
+        justify-content: flex-start;
+        overflow-x: hidden;
+        overflow-y: auto;
+        font-family: inherit;
+    }
+
+    .app-container {
+        overflow-x: hidden;
+        overflow-y: hidden;
+    }
+
+
+    /* Define a style for the posts */
+    .post {
+        font-size: 1.5em;
+        background-color: #ffffff;
+        border: 1px solid #dddddd;
+        border-radius: 5px;
+        box-shadow: 0px 2px 4px rgba(23, 11, 40, 0.3);
+        padding: 10px;
+        width: calc(85% - 10px);
+        font-family: inherit;
+    }
+
+    /* Define a style for the post title */
+    .post-title {
+        font-size: 2em;
+        font-weight: bold;
+        margin-bottom: 10px;
+    }
+
+    /* Define a style for the post author */
+    .post-author {
+        font-size: 1em;
+        color: #442178;
+        margin-bottom: 10px;
+    }
+
+    /* Define a style for the post content */
+    .post-content {
+        line-height: 2.5;
+        color: #170b28;
+    }
+
+    @media (min-width: 1080px) {
+    .right-side {
+            position: absolute;
+            top: 0;
+            width: 50vw;
+            height: 100vh;
+            background-color: rgba(23, 11, 40, 0.5);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 999;
+        }
+        .hidden {
+            transform: translateX(150%);
+            visibility: hidden;
+        }
+        .shown {
+            visibility: visible;
+            transform: translateX(100%);
+        }
+        /* Define a style for the secondary button */
+        button {
+            display: inline-block;
+            padding: 5px 10px;
+            border: 1px solid #8d5fd3;
+            border-radius: 0.5em;
+            font-size: 1em;
+            font-weight: bold;
+            text-align: center;
+            text-decoration: none;
+            background-color: #ffffff;
+            color: #8d5fd3;
+            cursor: pointer;
+            z-index: 999;
+            transition: background-color 0.2s ease-in-out;
+        }
+    }
+
+    @media (max-width: 1079px) {
+        .right-side {
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background-color: rgba(23, 11, 40, 0.5);
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                align-items: center;
+                z-index: 999;
+            }
+            .hidden {
+                visibility: hidden;
+            }
+            .shown {
+                visibility: visible;
+            }
+            /* Define a style for the secondary button */
+            button {
+                display: inline-block;
+                padding: 9px 19px;
+                border: 1px solid #8d5fd3;
+                border-radius: 0.8em;
+                font-size: 1.5em;
+                font-weight: bold;
+                text-align: center;
+                text-decoration: none;
+                background-color: #ffffff;
+                color: #8d5fd3;
+                cursor: pointer;
+                z-index: 999;
+                transition: background-color 0.2s ease-in-out;
+            }
+        }
+  
+    /* Define a style for the post editor textarea */
+    .post-editor #editor-content {
+      width: calc(100% - 2em);
+      height: 95%;
+      padding: 1em;
+      border: none;
+      border-radius: 0.5em;
+      background-color: #ffffff;
+      font-size: 1.5em;
+      line-height: 1.5;
+    }
+  
+    /* Define a style for the secondary button when hovered */
+    button:hover {
+      background-color: #c6afe9;
+    }
+    "####,)
+}
+
+
+#[get("/script.js")]
+async fn get_script() -> impl Responder {
+    HttpResponse::Ok().body(
+        r####"
+
+        const editorContainer = document.querySelector('.post-editor');
+        const postEditor = document.querySelector('.post-editor #editor-content');
+        const previewContainer = document.querySelector('.post-previewer');
+        const previewPost = document.querySelector('.preview-post');
+        const postContainer = document.querySelector('.post-container');
+        const isWideWindow = window.matchMedia('(min-width: 1080px)');
+
+        // Get the user preferences from localStorage or set defaults
+        const storedPreferences = localStorage.getItem('userPreferences');
+        const userPrefs = storedPreferences ? JSON.parse(storedPreferences) : {
+            maxPosts: 10,
+            recencyDays: 30
+        };
+
+        localStorage.setItem('userPreferences', JSON.stringify(userPrefs));
+
+
+        // Helper function to get the ID of the parent post element
+        function getPostID(element) {
+            while (element && !element.classList.contains('post')) {
+                element = element.parentElement;
+            }
+            return element ? element.id : null;
+        }
+
+
+
+        function postRenderer(postContentElement, postContent) {
+            postContentElement.setHTML
+              ? postContentElement.setHTML(postContent)
+              : /<\/?[a-z][\s\S]*>/i.test(postContent)
+                ? ((postContentElement.innerHTML = "<b><a href='https://developer.mozilla.org/en-US/docs/Web/API/HTML_Sanitizer_API#browser_compatibility' target='_blank'>unsupported browser</a>, rendering in text mode: </b><br/>"), postContentElement.appendChild(document.createTextNode(postContent)))
+                : (postContentElement.innerHTML = postContent);
+        }
+
+        function postConstructor(postObject) {
+            const post = document.createElement('div');
+            const title = document.createElement('div');
+            const author = document.createElement('div');
+            const content = document.createElement('div');
+            post.classList.add('post');
+            title.classList.add('post-title');
+            author.classList.add('post-author');
+            content.classList.add('post-content');
+            postRenderer(title, postObject.title);
+            postRenderer(author, postObject.author);
+            postRenderer(content, postObject.content);
+            post.appendChild(title);
+            post.appendChild(author);
+            post.appendChild(content);
+            post.id = postObject.postID;
+            post.signature = postObject.signature
+            return post;
+        }
+
+        async function appendPost(postID) {
+            const postResponse = await fetch(`/post/${postID}`);
+            if (!postResponse.ok) {
+              console.error(`Failed to load post ${postID}`);
+              return;
+            }
+
+            const postObject = await postResponse.json();
+            postObject.postID = postID;
+            const post = postConstructor(postObject);
+            const postsStartMarker = document.getElementById('posts-start-marker');
+            postContainer.insertBefore(post, postsStartMarker.nextSibling);
+
+            // Check if the number of posts in the post container has exceeded the maxPosts limit
+            const maxPosts = userPrefs.maxPosts || 10;
+            if (postContainer.children.length > maxPosts+2) {
+              // Remove the last post from the container
+              postContainer.removeChild(postContainer.lastChild);
+            }
+        }
+
+        async function getUnfilteredAnchors(postId) {
+            const response = await fetch(`/post/${postId}/unfiltered_anchors`);
+            if (!response.ok) {
+              throw new Error(`Failed to fetch unfiltered anchors for post ${postId}: ${response.status} ${response.statusText}`);
+            }
+            const anchorJson = await response.json();
+            return anchorJson.map(anchor => ({
+              linkId: anchor.link_id,
+              postId: anchor.post_id,
+              reference: anchor.reference,
+              referencingPostId: anchor.referencing_post_id,
+            }));
+          }
+          
+          async function getFilteredAnchors(postId) {
+            const response = await fetch(`/post/${postId}/anchors?max_posts=${userPrefs.maxPosts}&recency_days=${userPrefs.recencyDays}`);
+            if (!response.ok) {
+              throw new Error(`Failed to fetch filtered anchors for post ${postId}: ${response.status} ${response.statusText}`);
+            }
+            const anchorJson = await response.json();
+            return anchorJson.map(anchor => ({
+              linkId: anchor.link_id,
+              postId: anchor.post_id,
+              reference: anchor.reference,
+              referencingPostId: anchor.referencing_post_id,
+            }));
+          }
+
+          function insertTextAtCursor(textarea, text) {
+            // Get the current cursor position
+            const startPos = textarea.selectionStart;
+            const endPos = textarea.selectionEnd;
+          
+            // Insert the text at the current cursor position
+            textarea.value = textarea.value.substring(0, startPos) + text + textarea.value.substring(endPos);
+          
+            // Set the new cursor position
+            textarea.selectionStart = startPos + text.length;
+            textarea.selectionEnd = startPos + text.length;
+          
+            // Set the focus back to the textarea
+            textarea.focus();
+          }                 
+
+        // Define a function to load posts from the backend API
+        async function loadPosts() {
+            // Set the query parameters based on the user preferences
+            const queryParams = `?max_posts=${userPrefs.maxPosts}&recency_days=${userPrefs.recencyDays}`;
+
+            // Fetch the list of posts from the backend API
+            const response = await fetch(`/posts${queryParams}`);
+            const posts = await response.json();
+            // Get an array of post IDs
+            const postIDs = Object.keys(posts);  
+
+            // Loop over the posts and create elements for each one
+            postIDs.forEach(postID => {
+                // add the ID to the post object.
+                post = posts[postID];
+                post.postID = postID;
+                // Create a div element for the post
+                const postDiv = postConstructor(post);
+
+                // Add the post div to the post container
+                postContainer.appendChild(postDiv);
+            });
+        }
+
+        // Call the function to load the posts into the post container
+        loadPosts();
+
+        // Add a button element to start creating a transformation
+                postContainer.addEventListener('mouseup', event => {
+                const postID = getPostID(event.target);
+                const selection = window.getSelection();
+                const selectedText = selection.toString().trim();
+                    if (selectedText) {
+                        // Copy selection to editor
+                        const postID = getPostID(event.target);
+                        const linkID = `${postID}${Math.random().toString(36).substring(8)}`; // Generate a unique ID for the link
+                        const link = document.createElement('a');
+                        link.href = `#${linkID}`;
+                        link.innerText = selectedText;
+                        insertTextAtCursor(postEditor, link.outerHTML);
+                        // Save the link ID and start/end positions of the selected text
+                        const postDiv = document.getElementById(postID);
+                        const start = postDiv.innerText.indexOf(selectedText);
+                        const end = start + selectedText.length;
+
+                        //Anchor Format: link_id, post_id, reference, referencing_post_id
+                        //Reference Format: (post_start, post_end, ref_start, ref_end)
+                        // we have link_id, post_id, (post_start, post_end) at this point in time
+                        // we will only have (ref_start, ref_end) and referencing_post_id once the
+                        // referencing post has been saved.
+                        postEditor.temp = postEditor.temp ? postEditor.temp : {};
+                        postEditor.temp.pendingAnchors =
+                            postEditor.temp.pendingAnchors ?
+                            postEditor.temp.pendingAnchors :
+                            [];
+                        postEditor.temp.pendingAnchors.push({
+                            link_id: linkID,
+                            post_id: postID,
+                            post_start: start,
+                            post_end: end,
+                        });
+                    }
+                });
+
+
+          document.addEventListener('click', () => {
+            const isToggleBtn = event.target.classList.contains('toggle-button');
+            const isPreviewBtn = event.target.classList.contains('preview-button');
+
+          
+            if (isToggleBtn || isPreviewBtn) {
+              const container = isToggleBtn ? editorContainer : previewContainer;
+              const isHidden = container.classList.contains('hidden');
+          
+              if (isHidden) {
+                container.classList.remove('hidden');
+                container.classList.add('shown');
+                if (isWideWindow.matches){
+                    postContainer.style.width = '50%'
+                }
+                if (!isToggleBtn) {
+                  const previewContent = postEditor.value;
+                  postRenderer(previewPost, previewContent);
+                }
+              } else {
+                container.classList.add('hidden');
+                container.classList.remove('shown');
+                if (!isPreviewBtn) {
+                    postContainer.style.width = '100%'
+                }
+              }
+            }
+          });
+        
+
+          // Get a reference to the save button
+          const saveButton = document.querySelector('.save-button');
+          
+          // Add a click event listener to the save button
+          saveButton.addEventListener('click', async () => {
+            const postTitle = document.querySelector('.post-editor #editor-title');
+            const postAuthor = document.querySelector('.post-editor #editor-author');
+            const transformedText = postEditor.value;
+            const transformedTitle = postTitle.value;
+            const transformedAuthor = postAuthor.value;
+            // Create a new post object with the transformed text
+            const newPost = {
+              title: transformedTitle,
+              author: transformedAuthor,
+              content: transformedText,
+              signature: []
+            };
+          
+            // Send the new post object to the '/post' endpoint
+            const response = await fetch('/post', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify(newPost)
+            });
+          
+            // Get the post ID from the response and log it to the console
+            const data = await response.json();
+            const postID = data.postID;
+            console.log(`New post created with ID: ${postID}`);
+
+            if(postEditor.temp)if(postEditor.temp.pendingAnchors)postEditor.temp.pendingAnchors.forEach(pendingAnchor => {
+                
+                let postRendered = document.createElement("div");
+                const previewContent = postEditor.value;
+                postRenderer(postRendered, previewContent);
+                let query = "a[href='#"+pendingAnchor.link_id+"']";
+                let reference = postRendered.querySelector(query);
+                let referenceText = reference?reference.innerText:"";
+                let refStart = postRendered.innerText.indexOf(referenceText);
+                let refEnd = refStart + referenceText.length;
+                
+                let newAnchor = {
+                    link_id: pendingAnchor.link_id,
+                    post_id: pendingAnchor.post_id,
+                    reference: pendingAnchor.post_start+":"+pendingAnchor.post_end+":"+refStart+":"+refEnd,
+                    referencing_post_id: postID
+                }
+
+                // Send the new anchor object to the '/anchor' endpoint
+                const responsePromise = fetch('/anchor', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(newAnchor)
+                });
+
+            });
+          
+            clearPost();
+            appendPost(postID);
+          });
+
+
+        function clearPost() {
+            const postTitle = document.querySelector('.post-editor #editor-title');
+            const postAuthor = document.querySelector('.post-editor #editor-author');
+            // Clear the post editor
+            postEditor.value = '';
+            postTitle.value = '';
+            postAuthor.value = '';
+            delete postEditor.temp;
+            postEditor.readOnly = false;
+            postAuthor.readOnly = false;
+        }
+
+          // Click handler function for the sign button
+        async function signPost() {
+            // Get the post content from a variable in-scope
+            const postAuthor = document.querySelector('.post-editor #editor-author');
+
+            // Check if there is an existing keypair in localStorage
+            let localStorageKeypair = localStorage.getItem("keypair");
+            let keypair = localStorageKeypair ? 
+            await crypto.subtle.importKey(
+                "jwk", 
+                localStorageKeypair, 
+                { name: "ED25519", namedCurve: "ed25519" },
+                true,
+                ["sign", "verify"]): 
+            await crypto.subtle.generateKey(
+                { name: "ED25519", namedCurve: "ed25519" },
+                true,
+                ["sign", "verify"]);
+            localStorage.setItem("keypair", await crypto.subtle.exportKey("jwk", keypair));
+
+            // create an "aka" element which is appended to the post,
+            // holding the non-cryptographic author name
+            let aka = document.createElement('div');
+            if(postAuthor.value){
+                aka.classList.add('aka');
+                aka.value = postAuthor.value;
+                postEditor.value += aka.outerHTML
+            }
+            // Replace author with base64 of the pubkey
+            postAuthor.value = btoa(
+                String.fromCharCode(
+                    ...new Uint8Array(await crypto.subtle.exportKey("spki", keypair))
+                )
+            );
+
+            // Sign the post content using the keypair
+            const signature = await crypto.subtle.sign(
+                { name: "ED25519" },
+                keypair.privateKey,
+                new TextEncoder().encode(postEditor.value)
+            );
+
+            // Store the signature in a variable waiting for post submission
+            if(!postEditor.temp){postEditor.temp = {}}
+            postEditor.temp.signature = new Uint8Array(signature);
+            postEditor.readOnly = true;
+            postAuthor.readOnly = true;
+        }
+    "####,)
+}
+
 
 #[get("/bin")]
 async fn get_current_bin() -> impl Responder {
@@ -982,7 +1023,11 @@ async fn get_current_bin() -> impl Responder {
 async fn get_current_src() -> impl Responder {
     if let Ok(mutex) = TAR_GZ.lock() {
         if let Some(tar_gz) = mutex.as_ref() {
-            return HttpResponse::Ok().body(tar_gz.clone());
+            return HttpResponse::Ok()
+            .content_type("application/x-gtar")
+            .append_header(ContentEncoding::Gzip)
+            .append_header(ContentDisposition::attachment("src.tar.gz"))
+            .body(tar_gz.clone());
         }
     }
 
@@ -1010,13 +1055,18 @@ async fn main() -> std::io::Result<()> {
         App::new()
             .wrap(middleware::Compress::default())
             .service(create_anchor)
+            .service(get_anchors)
+            .service(get_unfiltered_anchors)
             .service(create_post)
             .service(index_page)
             .service(icon)
             .service(icon_text)
             .service(manifest)
+            .service(get_style)
+            .service(get_script)
             .service(get_post_by_id)
-            .service(get_random_posts)
+            .service(get_posts)
+            .service(linked_posts)
             .service(get_current_bin)
             .service(get_current_src)
 
