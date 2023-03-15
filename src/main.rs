@@ -42,6 +42,7 @@ async fn index_page() -> impl Responder {
                     <button id="sign-button">Sign</button>
                     <button class="toggle-button">Hide</button>
                     <button class="save-button toggle-button">Post</button>
+                    <button id="clear-button">Clear</button>
                     <button class="preview-button">Preview</button>
                 </div>
                 <textarea placeholder="Write your post here" id="editor-content"></textarea>
@@ -129,22 +130,20 @@ impl Default for Post {
 // Define a function to create a new post in the database
 async fn create_post(mut post: web::Json<Post>) -> impl Responder {
     // Verify the signature using the public key in the author field
-    let public_key_bytes = match general_purpose::URL_SAFE_NO_PAD.decode(&post.author) {
+    let public_key_bytes = match general_purpose::STANDARD.decode(&post.author) {
         Ok(bytes) => bytes,
         Err(_) => vec![],
     };
+    println!("{:?}",public_key_bytes);
     let public_key =
-        UnparsedPublicKey::new(&signature::ED25519, &public_key_bytes);
-    let signature_bytes = match general_purpose::URL_SAFE_NO_PAD.decode(&post.signature) {
-        Ok(bytes) => bytes,
-        Err(_) => vec![],
-    };
+        UnparsedPublicKey::new(&signature::ECDSA_P256_SHA256_FIXED, &public_key_bytes);
 
     // Generate a unique ID for the post using SHA-256
     let preimage = format!("{}{}{}{:?}", post.title, post.author, post.content, post.signature);
     let post_id = digest::digest(&SHA256, preimage.as_bytes());
     let post_id_str;
-    match public_key.verify(post.content.as_bytes(), &signature_bytes) {
+    println!("{:?}", &post);
+    match public_key.verify(post.content.as_bytes(), &post.signature) {
         Ok(_) => {
 
             post_id_str = general_purpose::URL_SAFE_NO_PAD.encode(post_id.as_ref());
@@ -220,7 +219,7 @@ async fn create_post(mut post: web::Json<Post>) -> impl Responder {
             }
         },
         Err(_) => {
-            // Author labelled as anonymous if public key not provided
+            // Author labelled as anonymous if public key not provided/verified
             post.author = String::from("Unverified: ")+&post.author.clone();
             post_id_str = format!("unverified_{}", general_purpose::URL_SAFE_NO_PAD.encode(post_id.as_ref()));
         },
@@ -889,7 +888,7 @@ async fn get_script() -> impl Responder {
               title: transformedTitle,
               author: transformedAuthor,
               content: transformedText,
-              signature: []
+              signature: postEditor.temp?postEditor.temp.signature?postEditor.temp.signature:[]:[]
             };
           
             // Send the new post object to the '/post' endpoint
@@ -959,18 +958,29 @@ async fn get_script() -> impl Responder {
 
             // Check if there is an existing keypair in localStorage
             let localStorageKeypair = localStorage.getItem("keypair");
-            let keypair = localStorageKeypair ? 
-            await crypto.subtle.importKey(
-                "jwk", 
-                localStorageKeypair, 
-                { name: "ED25519", namedCurve: "ed25519" },
-                true,
-                ["sign", "verify"]): 
+            let jwks = JSON.parse(localStorageKeypair);
+            let keypair = localStorageKeypair ? {
+                privateKey: await crypto.subtle.importKey(
+                    "jwk", 
+                    jwks.privateKey, 
+                    { name: "ECDSA", namedCurve: "P-256" },
+                    true,
+                    ["sign"]),
+                publicKey: await crypto.subtle.importKey(
+                    "jwk", 
+                    jwks.publicKey, 
+                    { name: "ECDSA", namedCurve: "P-256" },
+                    true,
+                    ["verify"])
+            }: 
             await crypto.subtle.generateKey(
-                { name: "ED25519", namedCurve: "ed25519" },
+                { name: "ECDSA", namedCurve: "P-256" },
                 true,
                 ["sign", "verify"]);
-            localStorage.setItem("keypair", await crypto.subtle.exportKey("jwk", keypair));
+            localStorage.setItem("keypair", JSON.stringify({
+                privateKey: await crypto.subtle.exportKey("jwk",keypair.privateKey),
+                publicKey: await crypto.subtle.exportKey("jwk",keypair.publicKey),
+            }));
 
             // create an "aka" element which is appended to the post,
             // holding the non-cryptographic author name
@@ -983,23 +993,32 @@ async fn get_script() -> impl Responder {
             // Replace author with base64 of the pubkey
             postAuthor.value = btoa(
                 String.fromCharCode(
-                    ...new Uint8Array(await crypto.subtle.exportKey("spki", keypair))
+                    ...new Uint8Array(await crypto.subtle.exportKey("spki", keypair.publicKey))
                 )
             );
 
             // Sign the post content using the keypair
             const signature = await crypto.subtle.sign(
-                { name: "ED25519" },
+                {
+                    name: "ECDSA",
+                    hash: { name: "SHA-256" },
+                },
                 keypair.privateKey,
                 new TextEncoder().encode(postEditor.value)
             );
 
             // Store the signature in a variable waiting for post submission
             if(!postEditor.temp){postEditor.temp = {}}
-            postEditor.temp.signature = new Uint8Array(signature);
+            postEditor.temp.signature = Array.from(new Uint8Array(signature));
+
             postEditor.readOnly = true;
             postAuthor.readOnly = true;
         }
+
+        const signButton = document.getElementById('sign-button');
+        signButton.addEventListener('click', signPost);
+        const clearButton = document.getElementById('clear-button');
+        clearButton.addEventListener('click', clearPost);
     "####,)
 }
 
