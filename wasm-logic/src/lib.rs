@@ -1,0 +1,450 @@
+use ring::{rand::SystemRandom};
+use ring::signature::{Ed25519KeyPair, KeyPair, self, UnparsedPublicKey};
+use base64::{engine::general_purpose, Engine};
+use wasm_bindgen::prelude::*;
+use ring::rand::SecureRandom;
+use crate::db_wrapper::*;
+
+/* considered using wee_alloc, but our binary size is already in MBs...
+extern crate wee_alloc;
+
+// Use `wee_alloc` as the global allocator 
+// - something like halving our wasm size in this case.
+#[global_allocator]
+static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
+ */
+
+pub mod db_wrapper {
+    pub use cozo::*;
+    use std::collections::BTreeMap;
+    use serde_json::json;
+    use serde::{Serialize, Deserialize};
+
+    // Define a struct for the anchor data
+    #[derive(Debug, Serialize, Deserialize)]
+    pub struct Anchor {
+        pub link_id: String,
+        pub post_id: String,
+        pub reference: String,
+        pub referencing_post_id: String,
+    }
+
+    // Define a struct for the post data
+    #[derive(Debug, Serialize, Deserialize)]
+    pub struct Post {
+        pub title: String,
+        pub author: String,
+        pub content: String,
+        pub signature: Vec<u8>,
+    }
+
+    impl Default for Post {
+        fn default() -> Self {
+            Post {
+                title: "Untitled".to_string(),
+                author: "No Author".to_string(),
+                content: "There are no posts present, this is the default post text.".to_string(),
+                signature: vec![],
+            }
+        }
+    }
+
+    pub fn initialize(db: &DbInstance) -> Result<NamedRows, String> {
+        let script = r#"
+            :create post {
+                post_id: String,
+                at: Validity,
+                =>
+                title: String,
+                author: String,
+                content: String,
+                signature: Bytes
+            }
+            :create anchor {
+                link_id: String,
+                at: Validity,
+                =>
+                post_id: String, 
+                reference: String, 
+                referencing_post_id: String
+            }
+            :create local {
+                item_id: String,
+                item_type: String
+            }
+            ::set_triggers post
+            on rm { 
+                ?[link_id, at, post_id, reference, referencing_post_id] :=
+                *anchor[link_id, at, post_id, reference, referencing_post_id]
+                _old[referencing_post_id, _, _, _, _, _]
+
+                :rm anchor {link_id, at}
+            }
+        "#;
+        db.run_script(script, BTreeMap::new()).map_err(|e| e.to_string())
+    }
+
+    pub fn create_post(
+        db: &DbInstance,
+        post_id: &str,
+        title: &str,
+        author: &str,
+        content: &str,
+        signature: &[u8],
+    ) -> Result<NamedRows, String> {
+        let script = r#"
+    ?[post_id, at, title, author, content, signature] <- [[$post_id, 'ASSERT', $title, $author, $content, $signature]]
+    :put post {post_id, at => title, author, content, signature}
+    :put local {post_id, "post"}
+    "#;
+        let mut params = BTreeMap::new();
+        params.insert("post_id".to_string(), json!(post_id).into());
+        params.insert("title".to_string(), json!(title).into());
+        params.insert("author".to_string(), json!(author).into());
+        params.insert("content".to_string(), json!(content).into());
+        params.insert("signature".to_string(), json!(signature).into());
+
+        db.run_script(script, params).map_err(|e| e.to_string())
+    }
+
+    pub fn create_anchor(
+        db: &DbInstance,
+        link_id: &str,
+        post_id: &str,
+        reference: &str,
+        referencing_post_id: &str,
+    ) -> Result<NamedRows, String> {
+        let script = r#"
+    ?[link_id, at, post_id, reference, referencing_post_id]  <- [[$link_id, 'ASSERT', $post_id, $reference, $referencing_post_id]]
+    :put anchor {link_id, at => post_id, reference, referencing_post_id}
+    :put local {link_id, "anchor"}
+    "#;
+        let mut params = BTreeMap::new();
+        params.insert("link_id".to_string(), json!(link_id).into());
+        params.insert("post_id".to_string(), json!(post_id).into());
+        params.insert("reference".to_string(), json!(reference).into());
+        params.insert("referencing_post_id".to_string(), json!(referencing_post_id).into());
+
+        db.run_script(script, params).map_err(|e| e.to_string())
+    }
+
+    pub fn retrieve_post_by_id(db: &DbInstance, post_id: &str) -> Result<NamedRows, String> {
+        let script = "?[post_id, at, title, author, content, signature] := *post[$post_id, at, title, author, content, signature]";
+        let mut params = BTreeMap::new();
+        params.insert("post_id".to_string(), json!(post_id).into());
+    
+        db.run_script(script, params).map_err(|e| e.to_string())
+    }
+    
+    pub fn retrieve_posts_by_ids(db: &DbInstance, post_ids: Vec<String>) -> Result<NamedRows, String> {
+        let script = "?[post_id, at, title, author, content, signature] := *post[post_id, at, title, author, content, signature], post_id in $post_ids";
+        let mut params = BTreeMap::new();
+        params.insert("post_ids".to_string(), json!(post_ids).into());
+    
+        db.run_script(script, params).map_err(|e| e.to_string())
+    }
+
+
+    pub fn retrieve_anchor_by_id(db: &DbInstance, link_id: &str) -> Result<NamedRows, String> {
+        let script = "?[link_id, at, post_id, reference, referencing_post_id] := *anchor[$link_id, at, post_id, reference, referencing_post_id]";
+        let mut params = BTreeMap::new();
+        params.insert("link_id".to_string(), json!(link_id).into());
+    
+        db.run_script(script, params).map_err(|e| e.to_string())
+    }
+
+    pub fn retrieve_anchors_by_post_id(db: &DbInstance, link_id: &str) -> Result<NamedRows, String> {
+        let script = "?[link_id, at, post_id, reference, referencing_post_id] := *anchor[link_id, at, $post_id, reference, referencing_post_id]";
+        let mut params = BTreeMap::new();
+        params.insert("post_id".to_string(), json!(link_id).into());
+    
+        db.run_script(script, params).map_err(|e| e.to_string())
+    }
+
+    pub fn retrieve_anchors_by_ids(db: &DbInstance, link_ids: Vec<String>) -> Result<NamedRows, String> {
+        let script = "?[link_id, at, post_id, reference, referencing_post_id] := *anchor[link_id, at, post_id, reference, referencing_post_id], link_id in $link_ids";
+        let mut params = BTreeMap::new();
+        params.insert("link_ids".to_string(), json!(link_ids).into());
+    
+        db.run_script(script, params).map_err(|e| e.to_string())
+    }
+
+    pub fn get_related_posts_by_same_author(
+        db: &DbInstance,
+        target_post_id: &str,
+    ) -> Result<NamedRows, String> {
+        let script = r#"
+        ?[related_post_id, at, title, author, content, signature] :=
+        *post[target_post_id, _, _, target_author, _, _],
+        *anchor[_, _, target_post_id, _, related_post_id],
+        *post[related_post_id, at, title, author, content, signature],
+        target_author = author,
+        target_post_id = $target_post_id
+    "#;
+    
+        let mut params = BTreeMap::new();
+        params.insert("target_post_id".to_string(), json!(target_post_id).into());
+    
+        db.run_script(script, params).map_err(|e| e.to_string())
+    }
+
+    pub fn get_related_posts_excluding_same_author(
+        db: &DbInstance,
+        target_post_id: &str,
+    ) -> Result<NamedRows, String> {
+        let script = r#"
+        ?[post_id, at, title, author, content, signature] := 
+        *post[post_id, at, title, author, content, signature],
+        *anchor[link_id, target_post_id, reference, post_id],
+        *post[target_post_id, _, _, not_author, _, _],
+        author != not_author,
+        target_post_id = $target_post_id
+        "#;
+    
+        let mut params = BTreeMap::new();
+        params.insert("target_post_id".to_string(), json!(target_post_id).into());
+    
+        db.run_script(script, params).map_err(|e| e.to_string())
+    }
+
+    pub fn get_related_authors(
+        db: &DbInstance,
+        author: &str
+    ) -> Result<NamedRows, String> {
+        let script = r#"
+        referencing[given_author, other_author] := *post[post_id, _, _, other_author, _, _],
+            *anchor[_, _, target_post_id, _, post_id],
+            *post[target_post_id, _, _, given_author, _, _]
+        referenced[given_author, other_author] := *post[post_id, _, _, given_author, _, _],
+            *anchor[_, _, target_post_id, _, post_id],
+            *post[target_post_id, _, _, other_author, _, _]
+        ?[other_author] :=
+            referencing[given_author, other_author] or
+            referenced[given_author, other_author],
+            given_author = $given_author,
+            other_author != given_author
+        "#;
+
+        let mut params = BTreeMap::new();
+        params.insert("given_author".to_string(), json!(author).into());
+    
+        db.run_script(script, params).map_err(|e| e.to_string())
+    }
+
+    pub fn get_ancestor_of_post(
+        db: &DbInstance,
+        post_id: &str,
+    ) -> Result<NamedRows, String> {
+        let script = r#"
+            ancestor[post_id, oldest_post_id] :=
+                *post[post_id, _, _, _, _, _],
+                *anchor[link_id, _, target_post_id, _, post_id],
+                *post[target_post_id, _, _, _, _, _],
+                oldest_post_id = target_post_id
+            ancestor[post_id, oldest_post_id] :=
+                *post[post_id, _, _, _, _, _],
+                *anchor[link_id, _, target_post_id, _, post_id],
+                *post[target_post_id, _, _, _, _, _],
+                ancestor[target_post_id, older_post_id],
+                oldest_post_id = older_post_id
+            ?[given_post_id, oldest_ancestor] :=
+                given_post_id = $post_id,
+                ancestor[given_post_id, oldest_ancestor]
+        "#;
+    
+        let mut params = BTreeMap::new();
+        params.insert("post_id".to_string(), json!(post_id).into());
+    
+        db.run_script(script, params).map_err(|e| e.to_string())
+    }
+
+    
+
+    pub fn get_latest_post_per_author(
+        db: &DbInstance,
+    ) -> Result<NamedRows, String> {
+        let script = r#"
+        {:create _temp_posts {post_id, at, title, author, content, signature}}
+
+        {
+            ?[author] := *post[_, _, _, author, _, _],
+            :replace _temp_authors {author}
+        }
+
+        %loop
+            %if { len_a[count(x)] := *_temp_authors[x]; ?[x] := len_a[z], x = z <= 0 }
+                %then %return _temp_posts
+            %end
+            {
+                ?[author] := *_temp_authors[author]
+                :limit 1
+                :replace unique_author {author}
+            }
+
+            {
+                ?[post_id, at, title, author, content, signature] :=
+                    *post[post_id, at, title, author, content, signature],
+                    *unique_author[author],
+                :sort -at
+                :limit 1
+                :put _temp_posts {post_id, at, title, author, content, signature}
+            }
+
+            {
+                ?[author] := *unique_author[author],
+                :rm _temp_authors {author}
+            }
+        %end
+        "#;
+        let params = BTreeMap::new();
+        db.run_script(script, params).map_err(|e| e.to_string())
+    }
+
+
+    pub fn get_most_diverse_posts(
+        db: &DbInstance,
+        max_results: u8,
+    ) -> Result<NamedRows, String> {
+        let script = r#"
+        {
+            author_diversity[post_id, count(author)] :=
+                *post[post_id, at, title, author, _, _],
+                *anchor[link_id, _, target_post_id, _, post_id],
+                *post[target_post_id, _, _, not_author, _, _],
+                author != not_author
+            ?[post_id, diversity] := author_diversity[post_id, diversity]
+            :replace _author_diversity {post_id, diversity}
+        }
+        {
+            ?[post_id, diversity] :=
+                *post[post_id, at, _, author, _, _],
+                *anchor[link_id, _, target_post_id, _, post_id],
+                *post[target_post_id, _, _, _, _, _],
+                at_med_idx = to_int(length(list(at))/2),
+                diversity = (max(to_int(at)) - to_int(get(list(at), at_med_idx))) / (to_int(now()) - max(to_int(at)))
+            :replace _timescale_diversity {post_id, diversity}
+        }
+        {
+            bridge_coefficient[post_id, count(orphaned_post_id)] :=
+                *post[post_id, _, _, _, _, _],
+                *post[not_post_id, _, _, _, _, _],
+                *anchor[_, _, orphaned_post_id, _, post_id],
+                *anchor[_, _, post_id, _, orphaned_post_id],
+                not *anchor[_, _, not_post_id, _, orphaned_post_id],
+                not *anchor[_, _, orphaned_post_id, _, not_post_id],
+                post_id != not_post_id
+            ?[post_id, coefficient] := bridge_coefficient[post_id, coefficient]
+            :replace _bridge_coefficient {post_id, coefficient}
+        }
+        {
+            def_score[post_id, default] := *post[post_id, _, _, _, _, _], default = rand_float()
+            ?[post_id, final_score] :=
+                *_author_diversity[post_id, author_div] or def_score[post_id, author_div],
+                *_timescale_diversity[post_id, timescale_div] or def_score[post_id, timescale_div],
+                *_bridge_coefficient[post_id, bridge_coeff] or def_score[post_id, bridge_coeff],
+                epsilon = 1,
+                final_score = (author_div + (bridge_coeff * author_div)) / (epsilon - timescale_div)
+            :sort -final_score
+            :replace latest_diversity_score {post_id, final_score}
+            :limit $max_results
+        }
+        {
+                ?[post_id, at, title, author, content, signature] :=
+                *post[post_id, at, title, author, content, signature],
+                *latest_diversity_score[post_id, final_score]
+        }
+        "#;
+        let mut params = BTreeMap::new();
+        params.insert("max_results".to_string(), json!(max_results).into());
+        db.run_script(script, params).map_err(|e| e.to_string())
+    }
+}
+
+#[wasm_bindgen]
+pub struct Keypair {
+    keypair: Ed25519KeyPair,
+    seed: Vec<u8>,
+}
+
+#[wasm_bindgen]
+impl Keypair {
+    #[wasm_bindgen(constructor)]
+    pub fn new() -> Result<Keypair, JsValue> {
+        let rng = SystemRandom::new();
+        let mut seed = vec![0u8; 32];
+        rng.fill(&mut seed).map_err(|e| JsValue::from_str(&format!("Error: {}", e)))?;
+        let keypair = Ed25519KeyPair::from_seed_unchecked(&seed).map_err(|e| JsValue::from_str(&format!("Error: {}", e)))?;
+        Ok(Keypair { keypair, seed })
+    }
+
+    pub fn from_seed(base64_seed: &str) -> Result<Keypair, JsValue> {
+        let decoded_seed = general_purpose::STANDARD.decode(base64_seed).map_err(|e| JsValue::from_str(&format!("Error: {}", e)))?;
+        let keypair = Ed25519KeyPair::from_seed_unchecked(&decoded_seed).map_err(|e| JsValue::from_str(&format!("Error: {}", e)))?;
+        Ok(Keypair { keypair, seed: decoded_seed })
+    }
+
+    pub fn sign(&self, message: &[u8]) -> Vec<u8> {
+        self.keypair.sign(message).as_ref().to_vec()
+    }
+
+    pub fn public_key_bytes(&self) -> Vec<u8> {
+        self.keypair.public_key().as_ref().to_vec()
+    }
+
+    pub fn seed_bytes(&self) -> Vec<u8> {
+        self.seed.clone()
+    }
+
+    pub fn verify(&self, message: &[u8], signature: &[u8]) -> bool {
+        let pubkey = UnparsedPublicKey::new(&signature::ED25519, self.keypair.public_key());
+        pubkey.verify(message, signature).is_ok()
+    }
+
+    pub fn verify_with_key(pubkey_bytes: &[u8], message: &[u8], signature: &[u8]) -> bool {
+        let pubkey = UnparsedPublicKey::new(&signature::ED25519, pubkey_bytes);
+        pubkey.verify(message, signature).is_ok()
+    }
+}
+
+#[wasm_bindgen]
+pub struct AppState {
+    db: DbInstance
+}
+
+#[wasm_bindgen]
+impl AppState {
+
+    #[wasm_bindgen(constructor)]
+    pub fn new() -> Result<AppState, JsValue> {
+        let db_instance = DbInstance::new("mem", "", "").unwrap();
+        db_wrapper::initialize(&db_instance)
+            .map(|_| AppState { db: db_instance })
+            .map_err(|e| serde_wasm_bindgen::to_value(&e).unwrap())
+    }
+
+
+    // we can't control if the use messes up their own local db anyway.
+    // so let's build the superpowers into the app.
+    #[wasm_bindgen]
+    pub fn script_raw(&self, script: &str) -> Result<JsValue, JsValue> {
+        self.db
+            .run_script(script, Default::default())
+            .map(|result| serde_wasm_bindgen::to_value(&result).unwrap())
+            .map_err(|e| serde_wasm_bindgen::to_value(&e.root_cause().to_string()).unwrap())
+    }
+
+    #[wasm_bindgen]
+    pub fn import(&self, data_json: &str) -> Result<JsValue, JsValue> {
+        serde_json::from_str(data_json)
+            .map_err(|_| JsValue::from_str("db import failed: invalid json"))
+            .and_then(|data| {
+                self.db
+                    .import_relations(data)
+                    .map(|_| JsValue::from_bool(true))
+                    .map_err(|e| JsValue::from_str(&e.root_cause().to_string()))
+            })
+    }
+
+
+
+}

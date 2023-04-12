@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+        <html lang="en">
+        <head>
+        <meta charset="UTF-8">
+        <title>Catalyst</title>
+        <link rel="icon" href="/icon.svg">
+        <link rel="manifest" href="/manifest.json">
+        <link rel="stylesheet" href="/style.css" type="text/css">
+        <meta name="viewport" width="device-width" initial-scale="1" interactive-widget="resizes-content">
+        </head>
+        <body>
+        <div class="app-container">
+            <div class="post-container">
+                <button class="toggle-button">Toggle Post Editor</button>
+                <div id="posts-start-marker"></div>
+            </div>
+            <div class="post-editor right-side hidden">
+                <div>
+                    <textarea placeholder="Post title" id="editor-title"></textarea>
+                    <textarea placeholder="Author name" id="editor-author"></textarea>
+                    <button id="sign-button">Sign</button>
+                    <button class="toggle-button">Hide</button>
+                    <button class="save-button toggle-button">Post</button>
+                    <button id="clear-button">Clear</button>
+                    <button class="preview-button">Preview</button>
+                </div>
+                <textarea placeholder="Write your post here" id="editor-content"></textarea>
+            </div>
+            <div class="post-previewer right-side hidden">
+                <button class="preview-button">Close Preview</button>
+                <div class="post">
+                    <div class="post-title"> Post Preview </div>
+                    <div class="post-author"> You </div>
+                    <div class="post-content preview-post"></div>
+                </div>
+            </div>
+            <footer>
+                <a href="/src" download>Download Source Code</a>
+            </footer>
+        </div>
+        </body>
+            <script type="module" src="/script.js">
+            </script>
+        </html>

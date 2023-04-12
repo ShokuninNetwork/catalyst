@@ -1,0 +1,12 @@
+{
+    "name": "Catalyst",
+    "short_name": "Catalyst",
+    "start_url": "../",
+    "icons": [{
+        "src": "../icon.svg",
+        "sizes": "any"
+    }],
+    "background_color": "#8d5fd3",
+    "theme_color": "#8d5fd3",
+    "display": "fullscreen"
+}
