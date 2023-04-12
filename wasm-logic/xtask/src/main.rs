@@ -9,6 +9,6 @@ fn main() -> Result<()> {
     dist.run("catalyst-wasm-logic")?;
     WasmOpt::level(1)
     .shrink(2)
-    .optimize("./wasm-logic.wasm")?;
+    .optimize("./dist/wasm-logic.wasm")?;
     Ok(())
 }
