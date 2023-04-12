@@ -21,10 +21,12 @@ features = [
 
 [dependencies.cozo]
 version = "0.5.1"
-features = [
-  "wasm"
-]
 default-features = false
+
+[features]
+default = ["native"]
+native = ["cozo/storage-rocksdb", "cozo/default"]
+wasm = ["cozo/wasm"]
 
 
 [lib]
