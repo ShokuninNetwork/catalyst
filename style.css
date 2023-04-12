@@ -29,13 +29,13 @@
     .app-container {
         overflow-x: hidden;
         overflow-y: hidden;
-        position: relative;
     }
 
     footer {
         height: 5rem;
         width: 100%;
-        position: absolute; bottom: 0;
+        position: absolute; 
+        bottom: 0;
     }
 
 

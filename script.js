@@ -117,7 +117,7 @@ async function loadPosts() {
     // Loop over the posts and create elements for each one
     postIDs.forEach(postID => {
         // add the ID to the post object.
-        post = posts[postID];
+        let post = posts[postID];
         post.postID = postID;
         // Create a div element for the post
         const postDiv = postConstructor(post);
