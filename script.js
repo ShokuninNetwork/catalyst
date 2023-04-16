@@ -205,7 +205,7 @@ loadPosts();
       title: transformedTitle,
       author: transformedAuthor,
       content: transformedText,
-      signature: postEditor.temp?postEditor.temp.signature?postEditor.temp.signature:[]:[]
+      signature: postEditor.temp?postEditor.temp.signature?postEditor.temp.signature:"":""
     };
   
     // Send the new post object to the '/post' endpoint
@@ -316,7 +316,9 @@ async function signPost() {
     );
     // Store the signature in a variable waiting for post submission
     if(!postEditor.temp){postEditor.temp = {}}
-    postEditor.temp.signature = Array.from(new Uint8Array(signature));
+    postEditor.temp.signature = btoa(
+      String.fromCharCode(Array.from(new Uint8Array(signature)))
+    );
     postEditor.readOnly = true;
     postAuthor.readOnly = true;
 }

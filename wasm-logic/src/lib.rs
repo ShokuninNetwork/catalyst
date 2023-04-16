@@ -1,8 +1,15 @@
+use std::cell::RefCell;
+use std::rc::Rc;
+use std::sync::Arc;
+
 use ring::{rand::SystemRandom};
 use ring::signature::{Ed25519KeyPair, KeyPair, self, UnparsedPublicKey};
 use base64::{engine::general_purpose, Engine};
 use wasm_bindgen::prelude::*;
+use wasm_peers::{ConnectionType, SessionId, UserId};
+use wasm_peers::many_to_many::NetworkManager;
 use ring::rand::SecureRandom;
+use web_sys::Document;
 use crate::db_wrapper::*;
 
 /* considered using wee_alloc, but our binary size is already in MBs...
@@ -16,7 +23,7 @@ static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 
 pub mod db_wrapper {
     pub use cozo::*;
-    use std::collections::BTreeMap;
+    use std::{collections::BTreeMap, str::Bytes};
     use serde_json::json;
     use serde::{Serialize, Deserialize};
 
@@ -29,13 +36,25 @@ pub mod db_wrapper {
         pub referencing_post_id: String,
     }
 
+    impl Anchor {
+        fn from_named_rows(named_row: NamedRows) -> Vec<Self> {
+            unimplemented!()
+        }
+    }
+
     // Define a struct for the post data
     #[derive(Debug, Serialize, Deserialize)]
     pub struct Post {
         pub title: String,
         pub author: String,
         pub content: String,
-        pub signature: Vec<u8>,
+        pub signature: String,
+    }
+
+    impl Post {
+        fn from_named_rows(named_row: NamedRows) -> Vec<Self> {
+            unimplemented!()
+        }
     }
 
     impl Default for Post {
@@ -44,13 +63,14 @@ pub mod db_wrapper {
                 title: "Untitled".to_string(),
                 author: "No Author".to_string(),
                 content: "There are no posts present, this is the default post text.".to_string(),
-                signature: vec![],
+                signature: "".to_string(),
             }
         }
     }
 
-    pub fn initialize(db: &DbInstance) -> Result<NamedRows, String> {
+    pub fn initialize(db: &DbInstance) -> Result<(), String> {
         let script = r#"
+        {
             :create post {
                 post_id: String,
                 at: Validity,
@@ -60,6 +80,8 @@ pub mod db_wrapper {
                 content: String,
                 signature: Bytes
             }
+        }
+        {
             :create anchor {
                 link_id: String,
                 at: Validity,
@@ -68,72 +90,79 @@ pub mod db_wrapper {
                 reference: String, 
                 referencing_post_id: String
             }
-            :create local {
-                item_id: String,
-                item_type: String
-            }
-            ::set_triggers post
-            on rm { 
-                ?[link_id, at, post_id, reference, referencing_post_id] :=
-                *anchor[link_id, at, post_id, reference, referencing_post_id]
-                _old[referencing_post_id, _, _, _, _, _]
-
-                :rm anchor {link_id, at}
-            }
+        }
         "#;
-        db.run_script(script, BTreeMap::new()).map_err(|e| e.to_string())
+        let _ = db.run_script(script, BTreeMap::new())
+        .map_err(|e|{ 
+            //println!("{:?}",e);
+            //e.to_string()
+        }); // we ignore eval::stored_relation_conflict because 
+            //it's fine if the relations already exist
+        Ok(())
     }
 
     pub fn create_post(
         db: &DbInstance,
         post_id: &str,
-        title: &str,
-        author: &str,
-        content: &str,
-        signature: &[u8],
+        post: &Post
     ) -> Result<NamedRows, String> {
         let script = r#"
     ?[post_id, at, title, author, content, signature] <- [[$post_id, 'ASSERT', $title, $author, $content, $signature]]
     :put post {post_id, at => title, author, content, signature}
-    :put local {post_id, "post"}
     "#;
         let mut params = BTreeMap::new();
-        params.insert("post_id".to_string(), json!(post_id).into());
-        params.insert("title".to_string(), json!(title).into());
-        params.insert("author".to_string(), json!(author).into());
-        params.insert("content".to_string(), json!(content).into());
-        params.insert("signature".to_string(), json!(signature).into());
+        params.insert("post_id".to_string(), DataValue::Str(post_id.into()));
+        params.insert("title".to_string(), DataValue::Str(post.title.clone().into()));
+        params.insert("author".to_string(), DataValue::Str(post.author.clone().into()));
+        params.insert("content".to_string(), DataValue::Str(post.content.clone().into()));
+        params.insert("signature".to_string(), DataValue::Str(post.signature.clone().into()));
 
-        db.run_script(script, params).map_err(|e| e.to_string())
+        db.run_script(script, params).map_err(|e|{ 
+            println!("{:?}",e);
+            e.to_string()
+        })
     }
 
     pub fn create_anchor(
         db: &DbInstance,
-        link_id: &str,
-        post_id: &str,
-        reference: &str,
-        referencing_post_id: &str,
+        anchor: &Anchor
     ) -> Result<NamedRows, String> {
         let script = r#"
     ?[link_id, at, post_id, reference, referencing_post_id]  <- [[$link_id, 'ASSERT', $post_id, $reference, $referencing_post_id]]
     :put anchor {link_id, at => post_id, reference, referencing_post_id}
-    :put local {link_id, "anchor"}
     "#;
         let mut params = BTreeMap::new();
-        params.insert("link_id".to_string(), json!(link_id).into());
-        params.insert("post_id".to_string(), json!(post_id).into());
-        params.insert("reference".to_string(), json!(reference).into());
-        params.insert("referencing_post_id".to_string(), json!(referencing_post_id).into());
+        params.insert("link_id".to_string(), DataValue::Str(anchor.link_id.clone().into()));
+        params.insert("post_id".to_string(), DataValue::Str(anchor.post_id.clone().into()));
+        params.insert("reference".to_string(), DataValue::Str(anchor.reference.clone().into()));
+        params.insert("referencing_post_id".to_string(), DataValue::Str(anchor.referencing_post_id.clone().into()));
 
-        db.run_script(script, params).map_err(|e| e.to_string())
+        db.run_script(script, params).map_err(|e|{ 
+            println!("{:?}",e);
+            e.to_string()
+        })
     }
 
     pub fn retrieve_post_by_id(db: &DbInstance, post_id: &str) -> Result<NamedRows, String> {
-        let script = "?[post_id, at, title, author, content, signature] := *post[$post_id, at, title, author, content, signature]";
+        let script = "?[post_id, at, title, author, content, signature] := *post[post_id, at, title, author, content, signature], post_id = $post_id";
+        let mut params = BTreeMap::new();
+        params.insert("post_id".to_string(), post_id.into());
+    
+        db.run_script(script, params).map_err(|e|{ 
+            println!("{:?}",e);
+            e.to_string()
+        })
+    }
+
+    pub fn remove_post_by_id(db: &DbInstance, post_id: &str) -> Result<NamedRows, String> {
+        let script = "?[post_id, at, title, author, content, signature] := *post[post_id, at, title, author, content, signature], post_id = $post_id";
         let mut params = BTreeMap::new();
         params.insert("post_id".to_string(), json!(post_id).into());
     
-        db.run_script(script, params).map_err(|e| e.to_string())
+        db.run_script(script, params).map_err(|e|{ 
+            println!("{:?}",e);
+            e.to_string()
+        })
     }
     
     pub fn retrieve_posts_by_ids(db: &DbInstance, post_ids: Vec<String>) -> Result<NamedRows, String> {
@@ -141,24 +170,33 @@ pub mod db_wrapper {
         let mut params = BTreeMap::new();
         params.insert("post_ids".to_string(), json!(post_ids).into());
     
-        db.run_script(script, params).map_err(|e| e.to_string())
+        db.run_script(script, params).map_err(|e|{ 
+            println!("{:?}",e);
+            e.to_string()
+        })
     }
 
 
     pub fn retrieve_anchor_by_id(db: &DbInstance, link_id: &str) -> Result<NamedRows, String> {
-        let script = "?[link_id, at, post_id, reference, referencing_post_id] := *anchor[$link_id, at, post_id, reference, referencing_post_id]";
+        let script = "?[link_id, at, post_id, reference, referencing_post_id] := *anchor[link_id, at, post_id, reference, referencing_post_id], link_id = $link_id";
         let mut params = BTreeMap::new();
         params.insert("link_id".to_string(), json!(link_id).into());
     
-        db.run_script(script, params).map_err(|e| e.to_string())
+        db.run_script(script, params).map_err(|e|{ 
+            println!("{:?}",e);
+            e.to_string()
+        })
     }
 
     pub fn retrieve_anchors_by_post_id(db: &DbInstance, link_id: &str) -> Result<NamedRows, String> {
-        let script = "?[link_id, at, post_id, reference, referencing_post_id] := *anchor[link_id, at, $post_id, reference, referencing_post_id]";
+        let script = "?[link_id, at, post_id, reference, referencing_post_id] := *anchor[link_id, at, post_id, reference, referencing_post_id], post_id = $post_id";
         let mut params = BTreeMap::new();
-        params.insert("post_id".to_string(), json!(link_id).into());
+        params.insert("post_id".to_string(), link_id.into());
     
-        db.run_script(script, params).map_err(|e| e.to_string())
+        db.run_script(script, params).map_err(|e|{ 
+            println!("{:?}",e);
+            e.to_string()
+        })
     }
 
     pub fn retrieve_anchors_by_ids(db: &DbInstance, link_ids: Vec<String>) -> Result<NamedRows, String> {
@@ -166,7 +204,10 @@ pub mod db_wrapper {
         let mut params = BTreeMap::new();
         params.insert("link_ids".to_string(), json!(link_ids).into());
     
-        db.run_script(script, params).map_err(|e| e.to_string())
+        db.run_script(script, params).map_err(|e|{ 
+            println!("{:?}",e);
+            e.to_string()
+        })
     }
 
     pub fn get_related_posts_by_same_author(
@@ -183,9 +224,12 @@ pub mod db_wrapper {
     "#;
     
         let mut params = BTreeMap::new();
-        params.insert("target_post_id".to_string(), json!(target_post_id).into());
+        params.insert("target_post_id".to_string(), target_post_id.into());
     
-        db.run_script(script, params).map_err(|e| e.to_string())
+        db.run_script(script, params).map_err(|e|{ 
+            println!("{:?}",e);
+            e.to_string()
+        })
     }
 
     pub fn get_related_posts_excluding_same_author(
@@ -202,9 +246,12 @@ pub mod db_wrapper {
         "#;
     
         let mut params = BTreeMap::new();
-        params.insert("target_post_id".to_string(), json!(target_post_id).into());
+        params.insert("target_post_id".to_string(), target_post_id.into());
     
-        db.run_script(script, params).map_err(|e| e.to_string())
+        db.run_script(script, params).map_err(|e|{ 
+            println!("{:?}",e);
+            e.to_string()
+        })
     }
 
     pub fn get_related_authors(
@@ -226,9 +273,12 @@ pub mod db_wrapper {
         "#;
 
         let mut params = BTreeMap::new();
-        params.insert("given_author".to_string(), json!(author).into());
+        params.insert("given_author".to_string(), author.into());
     
-        db.run_script(script, params).map_err(|e| e.to_string())
+        db.run_script(script, params).map_err(|e|{ 
+            println!("{:?}",e);
+            e.to_string()
+        })
     }
 
     pub fn get_ancestor_of_post(
@@ -253,9 +303,12 @@ pub mod db_wrapper {
         "#;
     
         let mut params = BTreeMap::new();
-        params.insert("post_id".to_string(), json!(post_id).into());
+        params.insert("post_id".to_string(), post_id.into());
     
-        db.run_script(script, params).map_err(|e| e.to_string())
+        db.run_script(script, params).map_err(|e|{ 
+            println!("{:?}",e);
+            e.to_string()
+        })
     }
 
     
@@ -265,12 +318,10 @@ pub mod db_wrapper {
     ) -> Result<NamedRows, String> {
         let script = r#"
         {:create _temp_posts {post_id, at, title, author, content, signature}}
-
         {
             ?[author] := *post[_, _, _, author, _, _],
             :replace _temp_authors {author}
         }
-
         %loop
             %if { len_a[count(x)] := *_temp_authors[x]; ?[x] := len_a[z], x = z <= 0 }
                 %then %return _temp_posts
@@ -280,7 +331,6 @@ pub mod db_wrapper {
                 :limit 1
                 :replace unique_author {author}
             }
-
             {
                 ?[post_id, at, title, author, content, signature] :=
                     *post[post_id, at, title, author, content, signature],
@@ -289,15 +339,16 @@ pub mod db_wrapper {
                 :limit 1
                 :put _temp_posts {post_id, at, title, author, content, signature}
             }
-
             {
                 ?[author] := *unique_author[author],
                 :rm _temp_authors {author}
             }
-        %end
-        "#;
+        %end"#;
         let params = BTreeMap::new();
-        db.run_script(script, params).map_err(|e| e.to_string())
+        db.run_script(script, params).map_err(|e|{ 
+            println!("{:?}",e);
+            e.to_string()
+         })
     }
 
 
@@ -356,7 +407,10 @@ pub mod db_wrapper {
         "#;
         let mut params = BTreeMap::new();
         params.insert("max_results".to_string(), json!(max_results).into());
-        db.run_script(script, params).map_err(|e| e.to_string())
+        db.run_script(script, params).map_err(|e|{ 
+            println!("{:?}",e);
+            e.to_string()
+        })
     }
 }
 
@@ -445,6 +499,114 @@ impl AppState {
             })
     }
 
+}
 
 
+#[wasm_bindgen]
+pub struct Messenger {
+    self_peer: NetworkManager,
+    room_name: SessionId,
+    signaling_server: String,
+    stun_server: String,
+    on_message: Option<Rc<RefCell<Box<dyn FnMut(&NetworkManager, &UserId, &String) -> ()>>>>,
+    on_open: Option<Rc<RefCell<Box<dyn FnMut(&NetworkManager, &UserId) -> ()>>>>,
+    is_open: bool
+}
+
+pub trait AppCallbacks {
+    fn on_open_callback(&self, manager: &NetworkManager, user_id: &UserId);
+    fn on_message_callback(&self, manager: &NetworkManager, user_id: &UserId, message: &String);
+}
+
+impl Messenger {
+    pub fn register_callbacks(&mut self, app: Arc<dyn AppCallbacks>) {
+        let on_open = {
+            let app = app.clone();
+            Rc::new(RefCell::new(Box::new(move |manager: &NetworkManager, user_id: &UserId| {
+                app.on_open_callback(manager, user_id)
+            }) as Box<dyn FnMut(&NetworkManager, &UserId)>))
+        };
+
+        let on_message = {
+            let app = app.clone();
+            Rc::new(RefCell::new(Box::new(move |manager: &NetworkManager, user_id: &UserId, message: &String| {
+                app.on_message_callback(manager, user_id, message)
+            }) as Box<dyn FnMut(&NetworkManager, &UserId, &String)>))
+        };
+
+        self.on_open = Some(on_open);
+        self.on_message = Some(on_message);
+    }
+}
+
+#[wasm_bindgen]
+impl Messenger {
+    #[wasm_bindgen(constructor)]
+    pub fn new(stun_serv_url: String, room_name: String) -> Result<Messenger, JsValue> {
+        let window = web_sys::window().expect("no global `window` exists");
+        let document = window.document().expect("should have a document on window");
+        let location = document.location().expect("document should have a location");
+        let hostname = location.hostname().expect("page should have hostname");
+        let signal_serv_url = hostname + ":9001";
+        if let Ok(nm) =  NetworkManager::new(
+            signal_serv_url.as_str(), 
+            SessionId::new(room_name.clone()), 
+            ConnectionType::Stun { urls: stun_serv_url.clone() }
+        ) {
+            Ok(Messenger { 
+                self_peer: nm, 
+                room_name: SessionId::new(room_name), 
+                signaling_server: signal_serv_url, 
+                stun_server: stun_serv_url,
+                on_message: None,
+                on_open: None,
+                is_open: false
+            })
+        } else {
+            Err(JsValue::from_str("peer creation failed"))
+        }
+    }
+
+    #[wasm_bindgen]
+    pub fn foreign_connection(signal_serv_url: String, stun_serv_url: String, room_name: String) -> Result<Messenger, JsValue> {
+        if let Ok(nm) =  NetworkManager::new(
+            signal_serv_url.as_str(), 
+            SessionId::new(room_name.clone()), 
+            ConnectionType::Stun { urls: stun_serv_url.clone() }
+        ) {
+            Ok(Messenger { 
+                self_peer: nm, 
+                room_name: SessionId::new(room_name), 
+                signaling_server: signal_serv_url, 
+                stun_server: stun_serv_url,
+                on_message: None,
+                on_open: None,
+                is_open: false
+            })
+        } else {
+            Err(JsValue::from_str("peer creation failed"))
+        }
+    }
+
+
+    #[wasm_bindgen]
+    pub fn open_peer(&mut self){
+        let on_open = self.on_open.as_ref().map(|cb| cb.clone());
+        let on_message = self.on_message.as_ref().map(|cb| cb.clone());
+        let network_join = self.self_peer.clone();
+        let network_message = self.self_peer.clone();
+        self.self_peer.start(
+            move |user_id| {
+                if let Some(cb) = &on_open {
+                    (cb.borrow_mut())(&network_join.clone(), &user_id);
+                }
+            },
+            move |user_id, message| {
+                if let Some(cb) = &on_message {
+                    (cb.borrow_mut())(&network_message.clone(), &user_id, &message);
+                }
+            }
+        );
+        self.is_open = true;
+    }
 }

@@ -1,8 +1,8 @@
 @charset "UTF-8";
     body {
         background-image: url( '/icon.svg' ), url( '/icon_text.svg' ), linear-gradient(to bottom right, white, rgba(23, 11, 40, 0.3));
-        background-position: top left, 12% 2%, top left;
-        background-size: 8%, 20%, 130vw 130vh;
+        background-position: top left, max(12%, 20em) 2%, top left;
+        background-size: max(9%, 10em), 40em, 130vw 130vh;
         background-repeat: no-repeat, no-repeat, no-repeat;
         overflow-x: hidden;
         overflow-y: hidden;
@@ -13,7 +13,7 @@
     .post-container {
         position: absolute;
         width: 100%;
-        height: calc(100% - 5rem);
+        height: calc(100% - 1rem);
         display: flex;
         gap: 10px;
         padding: 10px;
@@ -32,7 +32,7 @@
     }
 
     footer {
-        height: 5rem;
+        height: 1rem;
         width: 100%;
         position: absolute; 
         bottom: 0;
@@ -63,6 +63,7 @@
         font-size: 1em;
         color: #442178;
         margin-bottom: 10px;
+        overflow-x: hidden;
     }
 
     /* Define a style for the post content */
