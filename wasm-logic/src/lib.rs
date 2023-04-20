@@ -9,7 +9,7 @@ use wasm_bindgen::prelude::*;
 use wasm_peers::{ConnectionType, SessionId, UserId};
 use wasm_peers::many_to_many::NetworkManager;
 use ring::rand::SecureRandom;
-use web_sys::Document;
+use web_sys::{Document, Window};
 use crate::db_wrapper::*;
 
 /* considered using wee_alloc, but our binary size is already in MBs...
@@ -23,7 +23,7 @@ static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 
 pub mod db_wrapper {
     pub use cozo::*;
-    use std::{collections::BTreeMap, str::Bytes};
+    use std::{collections::BTreeMap};
     use serde_json::json;
     use serde::{Serialize, Deserialize};
 
@@ -92,11 +92,8 @@ pub mod db_wrapper {
             }
         }
         "#;
-        let _ = db.run_script(script, BTreeMap::new())
-        .map_err(|e|{ 
-            //println!("{:?}",e);
-            //e.to_string()
-        }); // we ignore eval::stored_relation_conflict because 
+        let _ = db.run_script(script, BTreeMap::new());
+            // we ignore eval::stored_relation_conflict because 
             //it's fine if the relations already exist
         Ok(())
     }
@@ -459,10 +456,33 @@ impl Keypair {
         pubkey.verify(message, signature).is_ok()
     }
 }
-
 #[wasm_bindgen]
 pub struct AppState {
-    db: DbInstance
+    inner: Rc<RefCell<InnerAppState>>,
+}
+
+struct InnerAppState {
+    db: DbInstance,
+    network: Option<Messenger>,
+}
+
+impl Clone for AppState {
+    fn clone(&self) -> Self {
+        Self {
+            inner: self.inner.clone(),
+        }
+    }
+}
+
+
+impl AppCallbacks for AppState {
+    fn on_open_callback(&self, manager: &NetworkManager, user_id: &UserId) {
+        todo!()
+    }
+
+    fn on_message_callback(&self, manager: &NetworkManager, user_id: &UserId, message: &String) {
+        todo!()
+    }
 }
 
 #[wasm_bindgen]
@@ -471,17 +491,37 @@ impl AppState {
     #[wasm_bindgen(constructor)]
     pub fn new() -> Result<AppState, JsValue> {
         let db_instance = DbInstance::new("mem", "", "").unwrap();
+        let network_option = Messenger::new("".to_string(), "main_sync".to_string()).ok();
         db_wrapper::initialize(&db_instance)
-            .map(|_| AppState { db: db_instance })
+            .map(|_|{
+                AppState {
+                    inner: Rc::new(RefCell::new(
+                        InnerAppState { 
+                        db: db_instance,
+                        network: network_option
+                    }))
+                }
+            })
             .map_err(|e| serde_wasm_bindgen::to_value(&e).unwrap())
     }
 
+    #[wasm_bindgen]
+    pub fn start_networking(&self){
+        let mut inner = self.inner.borrow_mut();
+        if let Some(mut network) = inner.network.as_mut() {
+            if !network.is_open {
+                let app_callbacks= Arc::new(self.clone());
+                network.register_callbacks(app_callbacks);
+                network.open_peer();
+            }
+        }
+    }
 
     // we can't control if the use messes up their own local db anyway.
     // so let's build the superpowers into the app.
     #[wasm_bindgen]
     pub fn script_raw(&self, script: &str) -> Result<JsValue, JsValue> {
-        self.db
+        self.inner.borrow().db
             .run_script(script, Default::default())
             .map(|result| serde_wasm_bindgen::to_value(&result).unwrap())
             .map_err(|e| serde_wasm_bindgen::to_value(&e.root_cause().to_string()).unwrap())
@@ -492,7 +532,7 @@ impl AppState {
         serde_json::from_str(data_json)
             .map_err(|_| JsValue::from_str("db import failed: invalid json"))
             .and_then(|data| {
-                self.db
+                self.inner.borrow().db
                     .import_relations(data)
                     .map(|_| JsValue::from_bool(true))
                     .map_err(|e| JsValue::from_str(&e.root_cause().to_string()))
@@ -519,6 +559,14 @@ pub trait AppCallbacks {
 }
 
 impl Messenger {
+    pub fn universal_on_open(network: &NetworkManager, user: &UserId) {
+        
+    }
+
+    pub fn universal_on_message(network: &NetworkManager, user: &UserId, message: &String) {
+        
+    }
+
     pub fn register_callbacks(&mut self, app: Arc<dyn AppCallbacks>) {
         let on_open = {
             let app = app.clone();
@@ -598,11 +646,13 @@ impl Messenger {
         self.self_peer.start(
             move |user_id| {
                 if let Some(cb) = &on_open {
+                    Self::universal_on_open(&network_join.clone(), &user_id);
                     (cb.borrow_mut())(&network_join.clone(), &user_id);
                 }
             },
             move |user_id, message| {
                 if let Some(cb) = &on_message {
+                    Self::universal_on_message(&network_message.clone(), &user_id, &message);
                     (cb.borrow_mut())(&network_message.clone(), &user_id, &message);
                 }
             }
