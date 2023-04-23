@@ -1,15 +1,11 @@
+extern crate crypto;
+
 use std::cell::RefCell;
 use std::rc::Rc;
 use std::sync::Arc;
-
-use ring::{rand::SystemRandom};
-use ring::signature::{Ed25519KeyPair, KeyPair, self, UnparsedPublicKey};
-use base64::{engine::general_purpose, Engine};
 use wasm_bindgen::prelude::*;
 use wasm_peers::{ConnectionType, SessionId, UserId};
 use wasm_peers::many_to_many::NetworkManager;
-use ring::rand::SecureRandom;
-use web_sys::{Document, Window};
 use crate::db_wrapper::*;
 
 /* considered using wee_alloc, but our binary size is already in MBs...
@@ -413,49 +409,51 @@ pub mod db_wrapper {
 
 #[wasm_bindgen]
 pub struct Keypair {
-    keypair: Ed25519KeyPair,
-    seed: Vec<u8>,
+    bytes: [u8; 32],
 }
 
 #[wasm_bindgen]
 impl Keypair {
     #[wasm_bindgen(constructor)]
     pub fn new() -> Result<Keypair, JsValue> {
-        let rng = SystemRandom::new();
-        let mut seed = vec![0u8; 32];
-        rng.fill(&mut seed).map_err(|e| JsValue::from_str(&format!("Error: {}", e)))?;
-        let keypair = Ed25519KeyPair::from_seed_unchecked(&seed).map_err(|e| JsValue::from_str(&format!("Error: {}", e)))?;
-        Ok(Keypair { keypair, seed })
-    }
-
-    pub fn from_seed(base64_seed: &str) -> Result<Keypair, JsValue> {
-        let decoded_seed = general_purpose::STANDARD.decode(base64_seed).map_err(|e| JsValue::from_str(&format!("Error: {}", e)))?;
-        let keypair = Ed25519KeyPair::from_seed_unchecked(&decoded_seed).map_err(|e| JsValue::from_str(&format!("Error: {}", e)))?;
-        Ok(Keypair { keypair, seed: decoded_seed })
+        let mut seed: [u8; 32] = [0u8; 32];
+        getrandom::getrandom(&mut seed);
+        Ok(Keypair { bytes: seed })
     }
 
     pub fn sign(&self, message: &[u8]) -> Vec<u8> {
-        self.keypair.sign(message).as_ref().to_vec()
+        let keypair = crypto::ed25519::keypair(&self.bytes);
+        crypto::ed25519::signature(message, &keypair.0).to_vec()
     }
 
     pub fn public_key_bytes(&self) -> Vec<u8> {
-        self.keypair.public_key().as_ref().to_vec()
+        let keypair = crypto::ed25519::keypair(&self.bytes);
+        keypair.1.to_vec()
     }
 
     pub fn seed_bytes(&self) -> Vec<u8> {
-        self.seed.clone()
+        self.bytes.to_vec()
     }
 
+    pub fn from_seed(seed_bytes: &[u8]) -> Self {
+        let mut seed: [u8; 32] = [0; 32];
+        seed.clone_from_slice(&seed_bytes[..32]);
+        let keypair = crypto::ed25519::keypair(&seed);
+        Keypair { bytes: seed }
+    }
+
+
     pub fn verify(&self, message: &[u8], signature: &[u8]) -> bool {
-        let pubkey = UnparsedPublicKey::new(&signature::ED25519, self.keypair.public_key());
-        pubkey.verify(message, signature).is_ok()
+        let keypair = crypto::ed25519::keypair(&self.bytes);
+        crypto::ed25519::verify(message, &keypair.1, signature)
     }
 
     pub fn verify_with_key(pubkey_bytes: &[u8], message: &[u8], signature: &[u8]) -> bool {
-        let pubkey = UnparsedPublicKey::new(&signature::ED25519, pubkey_bytes);
-        pubkey.verify(message, signature).is_ok()
+        crypto::ed25519::verify(message, &pubkey_bytes, signature)
     }
 }
+
+
 #[wasm_bindgen]
 pub struct AppState {
     inner: Rc<RefCell<InnerAppState>>,
@@ -477,11 +475,11 @@ impl Clone for AppState {
 
 impl AppCallbacks for AppState {
     fn on_open_callback(&self, manager: &NetworkManager, user_id: &UserId) {
-        todo!()
+        
     }
 
     fn on_message_callback(&self, manager: &NetworkManager, user_id: &UserId, message: &String) {
-        todo!()
+
     }
 }
 

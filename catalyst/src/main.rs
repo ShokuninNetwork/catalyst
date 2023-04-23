@@ -1,4 +1,4 @@
-use actix_web::{get, post, web::{self, Json}, HttpResponse, Responder, HttpServer, App, middleware, http::header::{ContentDisposition, ContentEncoding}};
+use actix_web::{get, post, web::{self}, HttpResponse, Responder, HttpServer, App, middleware, http::header::{ContentDisposition, ContentEncoding}};
 use base64::{engine::general_purpose, Engine};
 use rand::{thread_rng, Rng, distributions::Alphanumeric};
 use ring::{
@@ -548,8 +548,7 @@ async fn main() -> std::io::Result<()> {
             .service(get_current_bin)
             .service(get_current_src)
             .service(explore_posts)
-            .service(Files::new("/", "."))
-
+            .service(Files::new("/", ".").index_file("index.html"))
     })
     .bind(("0.0.0.0", 8080))?
     .run()
