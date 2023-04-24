@@ -1,8 +1,11 @@
-extern crate crypto;
+extern crate ed25519_dalek;
 
 use std::cell::RefCell;
 use std::rc::Rc;
 use std::sync::Arc;
+use ed25519_dalek::{Signer, Verifier, Signature, VerifyingKey};
+use rand_chacha::{ChaCha20Rng};
+use rand_chacha::rand_core::{SeedableRng, RngCore};
 use wasm_bindgen::prelude::*;
 use wasm_peers::{ConnectionType, SessionId, UserId};
 use wasm_peers::many_to_many::NetworkManager;
@@ -417,18 +420,27 @@ impl Keypair {
     #[wasm_bindgen(constructor)]
     pub fn new() -> Result<Keypair, JsValue> {
         let mut seed: [u8; 32] = [0u8; 32];
-        getrandom::getrandom(&mut seed);
-        Ok(Keypair { bytes: seed })
+        if let Ok(_) = getrandom::getrandom(&mut seed){
+            Ok(Keypair { bytes: seed })
+        } else {
+            // rng failed, probably bad environment
+            Err(JsValue::from_str("keypair seed generation failed."))
+        }
     }
 
     pub fn sign(&self, message: &[u8]) -> Vec<u8> {
-        let keypair = crypto::ed25519::keypair(&self.bytes);
-        crypto::ed25519::signature(message, &keypair.0).to_vec()
+        let mut rng = ChaCha20Rng::from_seed(self.bytes);
+        let mut secret_key: [u8; 32] = [0; 32];
+        rng.fill_bytes(&mut secret_key);
+        let keypair = ed25519_dalek::SigningKey::from_bytes(&secret_key);
+        keypair.sign(message).to_bytes().to_vec()
     }
 
     pub fn public_key_bytes(&self) -> Vec<u8> {
-        let keypair = crypto::ed25519::keypair(&self.bytes);
-        keypair.1.to_vec()
+        let mut rng = ChaCha20Rng::from_seed(self.bytes);
+        let mut secret_key: [u8; 32] = [0; 32];
+        rng.fill_bytes(&mut secret_key);
+        ed25519_dalek::SigningKey::from_bytes(&secret_key).verifying_key().as_bytes().to_vec()
     }
 
     pub fn seed_bytes(&self) -> Vec<u8> {
@@ -438,18 +450,33 @@ impl Keypair {
     pub fn from_seed(seed_bytes: &[u8]) -> Self {
         let mut seed: [u8; 32] = [0; 32];
         seed.clone_from_slice(&seed_bytes[..32]);
-        let keypair = crypto::ed25519::keypair(&seed);
         Keypair { bytes: seed }
     }
 
 
     pub fn verify(&self, message: &[u8], signature: &[u8]) -> bool {
-        let keypair = crypto::ed25519::keypair(&self.bytes);
-        crypto::ed25519::verify(message, &keypair.1, signature)
+        let mut rng = ChaCha20Rng::from_seed(self.bytes);
+        let mut secret_key: [u8; 32] = [0; 32];
+        rng.fill_bytes(&mut secret_key);
+        let mut sig: [u8; 64] = [0; 64];
+        sig.clone_from_slice(&signature[..64]);
+        ed25519_dalek::SigningKey::from_bytes(&secret_key).verifying_key()
+            .verify(message, &Signature::from_bytes(&sig))
+            .is_ok()
     }
 
     pub fn verify_with_key(pubkey_bytes: &[u8], message: &[u8], signature: &[u8]) -> bool {
-        crypto::ed25519::verify(message, &pubkey_bytes, signature)
+        let mut pubkey_real_bytes: [u8; 32] = [0; 32];
+        pubkey_real_bytes.clone_from_slice(&pubkey_bytes[..32]);
+        if let Ok(pubkey) = VerifyingKey::from_bytes(&pubkey_real_bytes){
+            let mut sig: [u8; 64] = [0; 64];
+        sig.clone_from_slice(&signature[..64]);
+        pubkey
+            .verify(message, &Signature::from_bytes(&sig))
+            .is_ok()
+        } else {
+            false
+        }
     }
 }
 
