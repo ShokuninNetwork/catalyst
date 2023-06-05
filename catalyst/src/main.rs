@@ -6,13 +6,11 @@ use ring::{
 };
 use serde::{Deserialize};
 use serde_json::{json};
-use std::{fs, io::Read, time::{SystemTime, UNIX_EPOCH}, collections::HashMap, sync::{Arc, Mutex}, net::SocketAddr, str::FromStr};
+use std::{fs, io::Read, time::{SystemTime, UNIX_EPOCH}, collections::HashMap, sync::{Arc, Mutex}};
 use std::process::Command;
 use lazy_static::lazy_static;
 use actix_files::Files;
 use catalyst_wasm_logic::{db_wrapper, db_wrapper::*, Keypair};
-use wasm_peers_signaling_server::many_to_many;
-use warp::Filter;
 
 lazy_static! {
     static ref TAR_GZ: Arc<Mutex<Option<Vec<u8>>>> = Arc::new(Mutex::new(None));
@@ -46,7 +44,7 @@ async fn create_post(mut post: web::Json<Post>) -> impl Responder {
     let signature = general_purpose::STANDARD
         .decode(&post.signature)
         .unwrap();
-
+    print!("{:?} ||||| {:?} ||||| {:?}", public_key_bytes, post.content.as_bytes(), signature);
     match Keypair::verify_with_key(
         &public_key_bytes,
         post.content.as_bytes(),
@@ -510,30 +508,6 @@ async fn get_current_src() -> impl Responder {
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    let many_to_many_signaling = {
-        let connections = many_to_many::Connections::default();
-        let connections = warp::any().map(move || connections.clone());
-
-        let sessions = many_to_many::Sessions::default();
-        let sessions = warp::any().map(move || sessions.clone());
-
-        warp::path("many-to-many")
-            .and(warp::ws())
-            .and(connections)
-            .and(sessions)
-            .map(|ws: warp::ws::Ws, connections, sessions| {
-                ws.on_upgrade(move |socket| {
-                    many_to_many::user_connected(socket, connections, sessions)
-                })
-            })
-    };
-
-    // Spawn the warp server in the background
-    let warp_server = warp::serve(many_to_many_signaling);
-    let warp_addr = SocketAddr::from_str("0.0.0.0:9001").expect("invalid IP address provided");
-    tokio::spawn(async move {
-        warp_server.run(warp_addr).await;
-    });
 
     // Start the actix-web server
     HttpServer::new(|| {

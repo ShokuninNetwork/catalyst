@@ -1,14 +1,12 @@
 extern crate ed25519_dalek;
 
 use std::cell::RefCell;
+use std::collections::HashMap;
 use std::rc::Rc;
-use std::sync::Arc;
 use ed25519_dalek::{Signer, Verifier, Signature, VerifyingKey};
 use rand_chacha::{ChaCha20Rng};
 use rand_chacha::rand_core::{SeedableRng, RngCore};
 use wasm_bindgen::prelude::*;
-use wasm_peers::{ConnectionType, SessionId, UserId};
-use wasm_peers::many_to_many::NetworkManager;
 use crate::db_wrapper::*;
 
 /* considered using wee_alloc, but our binary size is already in MBs...
@@ -447,14 +445,20 @@ impl Keypair {
         self.bytes.to_vec()
     }
 
-    pub fn from_seed(seed_bytes: &[u8]) -> Self {
+    pub fn from_seed(seed_bytes: &[u8]) -> Result<Keypair, JsValue> {
         let mut seed: [u8; 32] = [0; 32];
-        seed.clone_from_slice(&seed_bytes[..32]);
-        Keypair { bytes: seed }
+        if seed_bytes.len() == 32 {
+            seed.clone_from_slice(&seed_bytes[..32]);
+            Ok(Keypair { bytes: seed })
+        } else {
+            Err(JsValue::from_str("keypair seed restore failed: invalid seed"))
+        }
+        
     }
 
 
     pub fn verify(&self, message: &[u8], signature: &[u8]) -> bool {
+        if signature.len() != 64 { return false }
         let mut rng = ChaCha20Rng::from_seed(self.bytes);
         let mut secret_key: [u8; 32] = [0; 32];
         rng.fill_bytes(&mut secret_key);
@@ -466,14 +470,17 @@ impl Keypair {
     }
 
     pub fn verify_with_key(pubkey_bytes: &[u8], message: &[u8], signature: &[u8]) -> bool {
+        if pubkey_bytes.len() != 32 { return false }
+        if signature.len() != 64 { return false }   
+           
         let mut pubkey_real_bytes: [u8; 32] = [0; 32];
         pubkey_real_bytes.clone_from_slice(&pubkey_bytes[..32]);
         if let Ok(pubkey) = VerifyingKey::from_bytes(&pubkey_real_bytes){
             let mut sig: [u8; 64] = [0; 64];
-        sig.clone_from_slice(&signature[..64]);
-        pubkey
-            .verify(message, &Signature::from_bytes(&sig))
-            .is_ok()
+            sig.clone_from_slice(&signature[..64]);
+            pubkey
+                .verify(message, &Signature::from_bytes(&sig))
+                .is_ok()
         } else {
             false
         }
@@ -488,7 +495,6 @@ pub struct AppState {
 
 struct InnerAppState {
     db: DbInstance,
-    network: Option<Messenger>,
 }
 
 impl Clone for AppState {
@@ -500,13 +506,19 @@ impl Clone for AppState {
 }
 
 
-impl AppCallbacks for AppState {
-    fn on_open_callback(&self, manager: &NetworkManager, user_id: &UserId) {
-        
+
+impl AppState {
+    pub fn has_post(&self, post_id: &String) -> bool {
+        todo!();
+        true
     }
 
-    fn on_message_callback(&self, manager: &NetworkManager, user_id: &UserId, message: &String) {
+    pub fn add_post(&self, post_id: &String, post: Post){
+        todo!();
+    }
 
+    pub fn get_latest_posts(&self) -> HashMap<String, Post>{
+        todo!();
     }
 }
 
@@ -516,30 +528,14 @@ impl AppState {
     #[wasm_bindgen(constructor)]
     pub fn new() -> Result<AppState, JsValue> {
         let db_instance = DbInstance::new("mem", "", "").unwrap();
-        let network_option = Messenger::new("".to_string(), "main_sync".to_string()).ok();
-        db_wrapper::initialize(&db_instance)
-            .map(|_|{
-                AppState {
-                    inner: Rc::new(RefCell::new(
-                        InnerAppState { 
-                        db: db_instance,
-                        network: network_option
-                    }))
-                }
-            })
-            .map_err(|e| serde_wasm_bindgen::to_value(&e).unwrap())
-    }
-
-    #[wasm_bindgen]
-    pub fn start_networking(&self){
-        let mut inner = self.inner.borrow_mut();
-        if let Some(mut network) = inner.network.as_mut() {
-            if !network.is_open {
-                let app_callbacks= Arc::new(self.clone());
-                network.register_callbacks(app_callbacks);
-                network.open_peer();
-            }
-        }
+        let _ = initialize(&db_instance);
+        let app = AppState {
+            inner: Rc::new(RefCell::new(
+                InnerAppState { 
+                db: db_instance,
+                }))
+        };
+        Ok(app)
     }
 
     // we can't control if the use messes up their own local db anyway.
@@ -564,124 +560,4 @@ impl AppState {
             })
     }
 
-}
-
-
-#[wasm_bindgen]
-pub struct Messenger {
-    self_peer: NetworkManager,
-    room_name: SessionId,
-    signaling_server: String,
-    stun_server: String,
-    on_message: Option<Rc<RefCell<Box<dyn FnMut(&NetworkManager, &UserId, &String) -> ()>>>>,
-    on_open: Option<Rc<RefCell<Box<dyn FnMut(&NetworkManager, &UserId) -> ()>>>>,
-    is_open: bool
-}
-
-pub trait AppCallbacks {
-    fn on_open_callback(&self, manager: &NetworkManager, user_id: &UserId);
-    fn on_message_callback(&self, manager: &NetworkManager, user_id: &UserId, message: &String);
-}
-
-impl Messenger {
-    pub fn universal_on_open(network: &NetworkManager, user: &UserId) {
-        
-    }
-
-    pub fn universal_on_message(network: &NetworkManager, user: &UserId, message: &String) {
-        
-    }
-
-    pub fn register_callbacks(&mut self, app: Arc<dyn AppCallbacks>) {
-        let on_open = {
-            let app = app.clone();
-            Rc::new(RefCell::new(Box::new(move |manager: &NetworkManager, user_id: &UserId| {
-                app.on_open_callback(manager, user_id)
-            }) as Box<dyn FnMut(&NetworkManager, &UserId)>))
-        };
-
-        let on_message = {
-            let app = app.clone();
-            Rc::new(RefCell::new(Box::new(move |manager: &NetworkManager, user_id: &UserId, message: &String| {
-                app.on_message_callback(manager, user_id, message)
-            }) as Box<dyn FnMut(&NetworkManager, &UserId, &String)>))
-        };
-
-        self.on_open = Some(on_open);
-        self.on_message = Some(on_message);
-    }
-}
-
-#[wasm_bindgen]
-impl Messenger {
-    #[wasm_bindgen(constructor)]
-    pub fn new(stun_serv_url: String, room_name: String) -> Result<Messenger, JsValue> {
-        let window = web_sys::window().expect("no global `window` exists");
-        let document = window.document().expect("should have a document on window");
-        let location = document.location().expect("document should have a location");
-        let hostname = location.hostname().expect("page should have hostname");
-        let signal_serv_url = hostname + ":9001";
-        if let Ok(nm) =  NetworkManager::new(
-            signal_serv_url.as_str(), 
-            SessionId::new(room_name.clone()), 
-            ConnectionType::Stun { urls: stun_serv_url.clone() }
-        ) {
-            Ok(Messenger { 
-                self_peer: nm, 
-                room_name: SessionId::new(room_name), 
-                signaling_server: signal_serv_url, 
-                stun_server: stun_serv_url,
-                on_message: None,
-                on_open: None,
-                is_open: false
-            })
-        } else {
-            Err(JsValue::from_str("peer creation failed"))
-        }
-    }
-
-    #[wasm_bindgen]
-    pub fn foreign_connection(signal_serv_url: String, stun_serv_url: String, room_name: String) -> Result<Messenger, JsValue> {
-        if let Ok(nm) =  NetworkManager::new(
-            signal_serv_url.as_str(), 
-            SessionId::new(room_name.clone()), 
-            ConnectionType::Stun { urls: stun_serv_url.clone() }
-        ) {
-            Ok(Messenger { 
-                self_peer: nm, 
-                room_name: SessionId::new(room_name), 
-                signaling_server: signal_serv_url, 
-                stun_server: stun_serv_url,
-                on_message: None,
-                on_open: None,
-                is_open: false
-            })
-        } else {
-            Err(JsValue::from_str("peer creation failed"))
-        }
-    }
-
-
-    #[wasm_bindgen]
-    pub fn open_peer(&mut self){
-        let on_open = self.on_open.as_ref().map(|cb| cb.clone());
-        let on_message = self.on_message.as_ref().map(|cb| cb.clone());
-        let network_join = self.self_peer.clone();
-        let network_message = self.self_peer.clone();
-        self.self_peer.start(
-            move |user_id| {
-                if let Some(cb) = &on_open {
-                    Self::universal_on_open(&network_join.clone(), &user_id);
-                    (cb.borrow_mut())(&network_join.clone(), &user_id);
-                }
-            },
-            move |user_id, message| {
-                if let Some(cb) = &on_message {
-                    Self::universal_on_message(&network_message.clone(), &user_id, &message);
-                    (cb.borrow_mut())(&network_message.clone(), &user_id, &message);
-                }
-            }
-        );
-        self.is_open = true;
-    }
 }
