@@ -1,4 +1,4 @@
-import init, { Messenger, AppState, Keypair } from "./dist/wasm-logic.js";
+import init, { AppState, Keypair } from "./dist/wasm-logic.js";
 await init("/dist/wasm-logic.wasm");
 const app = new AppState();
 const editorContainer = document.querySelector('.post-editor');
