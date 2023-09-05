@@ -158,7 +158,7 @@ pub mod db_wrapper {
             e.to_string()
         })
     }
-    
+
     pub fn retrieve_posts_by_ids(db: &DbInstance, post_ids: Vec<String>) -> Result<NamedRows, String> {
         let script = "?[post_id, at, title, author, content, signature] := *post[post_id, at, title, author, content, signature], post_id in $post_ids";
         let mut params = BTreeMap::new();
@@ -169,7 +169,6 @@ pub mod db_wrapper {
             e.to_string()
         })
     }
-
 
     pub fn retrieve_anchor_by_id(db: &DbInstance, link_id: &str) -> Result<NamedRows, String> {
         let script = "?[link_id, at, post_id, reference, referencing_post_id] := *anchor[link_id, at, post_id, reference, referencing_post_id], link_id = $link_id";
@@ -269,7 +268,7 @@ pub mod db_wrapper {
         let mut params = BTreeMap::new();
         params.insert("given_author".to_string(), author.into());
     
-        db.run_script(script, params).map_err(|e|{ 
+        db.run_script(script, params).map_err(|e|{
             println!("{:?}",e);
             e.to_string()
         })

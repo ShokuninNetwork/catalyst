@@ -13,7 +13,7 @@ build wasm blob:
 
 `cargo run --release --bin catalyst`
 
-This will run a webserver on 0.0.0.0:8080.
+This will run a webserver on 0.0.0.0:8080 (or localhost:8080).
 
 ## Roadmap
 
