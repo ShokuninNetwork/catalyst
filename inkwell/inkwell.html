@@ -10,6 +10,20 @@
 <body>
   <div id="inkwell-bottle"></div>
   <script id="storyweave-script">
+  const autoSignaling = {
+    makeLocalId: function (id) {
+      document.getElementById("storyweaver-storage-view").contentWindow.postMessage({ action: 'fallback_signal', key: "id", value: id }, storageUrlPrefix + storageHost);
+    },
+    makeSdpReciever: function (sdpr) {
+      document.getElementById("storyweaver-storage-view").contentWindow.postMessage({ action: 'fallback_signal', key: "reciever_sdp", value: sdpr }, storageUrlPrefix + storageHost);
+    },
+    makeSdpSender: function (sender) {
+      document.getElementById("storyweaver-storage-view").contentWindow.postMessage({ action: 'fallback_signal', key: "sender_sdp", value: sender }, storageUrlPrefix + storageHost);
+    },
+    makeManualSignal: function (signal) {
+      document.getElementById("storyweaver-storage-view").contentWindow.postMessage({ action: 'fallback_signal', key: "manual_signal", value: signal }, storageUrlPrefix + storageHost);
+    }
+  };
   function checkForParticipatingDiv() {
     return document.getElementById('inkwell-bottle') !== null;
   }
@@ -34,7 +48,7 @@
       // need to think of a better way to secure requests.
   
       const { action, key, value } = event.data;
-      console.log(event.data);
+      //console.log(event.data);
       if (action === 'set') {
         localStorage.setItem(key, JSON.stringify(value));
       } else if (action === 'get') {
@@ -61,13 +75,13 @@
         //let the page embedding this script handle the logic
         //we just listen for their responses with an eventlistener
         const signalingEvent = new CustomEvent('signalingMessage', { detail: value });
-        window.parent.dispatchEvent(signalingEvent);
+        window.dispatchEvent(signalingEvent);
       }
     });
   
-    window.addEventListener('signalingMessage', (event) => {
+    window.addEventListener('signalingBackendMessage', (event) => {
       const message = event.detail;
-      console.log('Received signaling message:', message);
+      //console.log('Received signaling message:', message);
       window.parent.postMessage({ action: "backend_signal", value: message }, window.parent.origin);
     });
   
@@ -184,11 +198,11 @@
             </div>
           </div>
                   <div id="button-container" style="width: 100%; display: flex; justify-content: space-around;">
-            <button class="tipholder" id="top-story"> ^ <span class="tooltip-text">Go to the first page in this story</span></button>
+                      <button class="tipholder" id="top-story"> ^ <span class="tooltip-text">Go to the first page in this story</span></button>
                       <button class="tipholder" id="back-story"> < <span class="tooltip-text">Go to the previous page in this story</span></button>
                       <button class="tipholder" id="pos-tag"> + <span class="tooltip-text">Add or promote tags on this page, creating a new story, or adding this page to an existing story</span></button>
                       <button class="tipholder" id="neg-tag"> - <span class="tooltip-text">Remove or demote tags on this page</span></button>
-            <button class="tipholder" id="report"> !! <span class="tooltip-text">Report abuse!</span></button>
+                      <button class="tipholder" id="report"> !! <span class="tooltip-text">Report abuse!</span></button>
                       <button class="tipholder" id="pos-usr"> + U <span class="tooltip-text">Promote the user(s) that submitted/promoted this page</span></button>
                       <button class="tipholder" id="neg-usr"> - U <span class="tooltip-text">Demote the user(s) that submitted/promoted this page</span></button>
                       <button class="tipholder" id="fwd-story"> > <span class="tooltip-text">Go to the next page in this story</span></button>
@@ -230,10 +244,13 @@
   
       if (action === 'response') {
         // Handle the received data from the iframe's localstorage
-        console.log(`Received data for key "${key}":`, value);
+        //console.log(`Received data for key "${key}":`, value);
       } else if (action === 'resume') {
   
         resumeConnectionsAndStoredOffers(value.attemptResume, value.stored_offers);
+      } else if (action === 'backend_signal') {
+
+        routeSignalingMessage(value)
       }
     });
   
@@ -340,6 +357,7 @@
     function generatePeerId() {
       let id = Math.random().toString(36).slice(2, 18);
       document.getElementById("peer-id").innerText = id;
+      autoSignaling.makeLocalId(id);
       return id;
     }
 
@@ -351,6 +369,7 @@
             document.getElementById("other-offer").disabled = true;
             document.getElementById("other-offer").value = "";
             document.getElementById("local-answer").innerText = maybeAnswer;
+            autoSignaling.makeSdpReciever(maybeAnswer);
             document.getElementById('network-status').innerText = "Please provide answer to other peer...";
           }, 0);
         }
@@ -365,6 +384,7 @@
         let pc = createRTCPeerConnection(peerId);
         let offer = await createOffer(pc, peerId);
         setTimeout(function() {
+          autoSignaling.makeSdpSender(offer);
           document.getElementById("spare-offer").innerText = offer;
           document.getElementById('network-status').innerText = "Please provide offer to other peer...";
         }, 0);
@@ -491,7 +511,7 @@
   
     function handleMessage(event) {
       const message = JSON.parse(event.data);
-      console.log(message);
+      //console.log(message);
       handleMessageInner(message);
     }
   
@@ -575,6 +595,7 @@
         }));
       } else if (message.to == document.getElementById("other-peer").value) {
         // Manual signalling, stored in UI
+        autoSignaling.makeManualSignal(JSON.stringify(message));
         document.getElementById("manual-signals").innerText += JSON.stringify(message);
       } else if (connectedPeers[message.to]) {
         connectedPeers[message.to].channel.send(JSON.stringify(message.inner));
