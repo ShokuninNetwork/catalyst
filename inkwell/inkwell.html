@@ -10,108 +10,108 @@
 <body>
   <div id="inkwell-bottle"></div>
   <script id="storyweave-script">
-  const autoSignaling = {
-    makeLocalId: function (id) {
-      document.getElementById("storyweaver-storage-view").contentWindow.postMessage({ action: 'fallback_signal', key: "id", value: id }, storageUrlPrefix + storageHost);
-    },
-    makeSdpReciever: function (sdpr) {
-      document.getElementById("storyweaver-storage-view").contentWindow.postMessage({ action: 'fallback_signal', key: "reciever_sdp", value: sdpr }, storageUrlPrefix + storageHost);
-    },
-    makeSdpSender: function (sender) {
-      document.getElementById("storyweaver-storage-view").contentWindow.postMessage({ action: 'fallback_signal', key: "sender_sdp", value: sender }, storageUrlPrefix + storageHost);
-    },
-    makeManualSignal: function (signal) {
-      document.getElementById("storyweaver-storage-view").contentWindow.postMessage({ action: 'fallback_signal', key: "manual_signal", value: signal }, storageUrlPrefix + storageHost);
+    function checkForParticipatingDiv() {
+      return document.getElementById('inkwell-bottle') !== null;
     }
-  };
-  function checkForParticipatingDiv() {
-    return document.getElementById('inkwell-bottle') !== null;
-  }
-  
-  function createInkwellUI() {
-    let uiContainer = document.getElementById('inkwell-bottle');
-    uiContainer.innerHTML = `<div>Welcome to the Storyweave.</div>
+
+    function createInkwellUI() {
+      let uiContainer = document.getElementById('inkwell-bottle');
+      uiContainer.innerHTML = `<div>Welcome to the Storyweave.</div>
     <label for="hostname-port"> Will you provide your own Inkwell? Your Inkwell: </label>
     <input type="text" id="inkwell-configurator">
     <button class="tipholder" id="generate-link">Generate Bookmarklet</button>
     <div id="bookmarklet-link"></div>
     <div> You may copy the id="storyweave-script" section from this page to your own pages to create an inkwell. </div>
     `
-  }
-  
-  let maybeExtant = document.getElementById("storyweave-main-container");
-  let storageHost = window.storageHost ? window.storageHost : window.location.host;
-  if (checkForParticipatingDiv() && document.getElementById("inkwell-configurator") == null) {
-    createInkwellUI();
-    window.addEventListener('message', (event) => {
-      //if (event.origin !== 'https://yourdomain.com') return;
-      // need to think of a better way to secure requests.
-  
-      const { action, key, value } = event.data;
-      //console.log(event.data);
-      if (action === 'set') {
-        localStorage.setItem(key, JSON.stringify(value));
-      } else if (action === 'get') {
-        const data = JSON.parse(localStorage.getItem(key));
-        event.source.postMessage({ action: 'response', key, value: data }, event.origin);
-      } else if (action === 'remove') {
-        localStorage.removeItem(key);
-      } else if (action === 'store_offer') {
-        let offers = JSON.parse(localStorage.getItem("stored_offers"));
-        if (offers[value.peerId]) {
-          event.source.postMessage({ action: "dropped_offer", value: { who: value.peerId, as: value.as } }, event.origin);
-        }
-        offers[value.peerId] = [value.as, value.offer];
-        localStorage.setItem('stored_offers', JSON.stringify(offers));
-      } else if (action === 'store_state') {
-        let connections = JSON.parse(localStorage.getItem("saved_state"));
-        connections[value.peerId] = [value.localDescriptor, value.remoteDescriptor, value.as];
-        localStorage.setItem('saved_state', JSON.stringify(connections));
-      } else if (action === 'flush_state') {
-        localStorage.removeItem('saved_state');
-        localStorage.removeItem('stored_offers');
-      } else if (action === 'fallback_signal') {
-        //use some backend for signalling as fallback/bootstrap
-        //let the page embedding this script handle the logic
-        //we just listen for their responses with an eventlistener
-        const signalingEvent = new CustomEvent('signalingMessage', { detail: value });
-        window.dispatchEvent(signalingEvent);
-      }
-    });
-  
-    window.addEventListener('signalingBackendMessage', (event) => {
-      const message = event.detail;
-      //console.log('Received signaling message:', message);
-      window.parent.postMessage({ action: "backend_signal", value: message }, window.parent.origin);
-    });
-  
-    if (window.parent) {
-      let saved_state = JSON.parse(localStorage.getItem("saved_state"));
-      let stored_offers = JSON.parse(localStorage.getItem("stored_offers"));
-      let resume_obj = { attemptResume: saved_state, stored_offers: stored_offers }
-      window.parent.postMessage({ action: "resume", value: resume_obj }, window.parent.origin);
     }
-  
-    //page builder
-    document.getElementById('inkwell-configurator').value = window.location.host;
-    document.getElementById("generate-link").addEventListener("click", async () => {
-      let inkwell = document.getElementById("inkwell-configurator").value;
-      let js = document.getElementById("storyweave-script").innerHTML;
-      let link = `<a href="javascript:(function(){${encodeURIComponent(`window.storageHost = '${inkwell}';` + js)}}());"> Toggle Storyweaver </a>
+
+    let maybeExtant = document.getElementById("storyweave-main-container");
+    let storageHost = window.storageHost ? window.storageHost : window.location.host;
+    if (checkForParticipatingDiv() && document.getElementById("inkwell-configurator") == null) {
+      createInkwellUI();
+      window.addEventListener('message', (event) => {
+        //if (event.origin !== 'https://yourdomain.com') return;
+        // need to think of a better way to secure requests.
+
+        const { action, key, value } = event.data;
+        //console.log(event.data);
+        if (action === 'set') {
+          localStorage.setItem(key, JSON.stringify(value));
+        } else if (action === 'get') {
+          const data = JSON.parse(localStorage.getItem(key));
+          event.source.postMessage({ action: 'response', key, value: data }, event.origin);
+        } else if (action === 'remove') {
+          localStorage.removeItem(key);
+        } else if (action === 'store_offer') {
+          let offers = JSON.parse(localStorage.getItem("stored_offers"));
+          if (offers[value.peerId]) {
+            event.source.postMessage({ action: "dropped_offer", value: { who: value.peerId, as: value.as } }, event.origin);
+          }
+          offers[value.peerId] = [value.as, value.offer];
+          localStorage.setItem('stored_offers', JSON.stringify(offers));
+        } else if (action === 'store_state') {
+          let connections = JSON.parse(localStorage.getItem("saved_state"));
+          connections[value.peerId] = [value.localDescriptor, value.remoteDescriptor, value.as];
+          localStorage.setItem('saved_state', JSON.stringify(connections));
+        } else if (action === 'flush_state') {
+          localStorage.removeItem('saved_state');
+          localStorage.removeItem('stored_offers');
+        } else if (action === 'fallback_signal') {
+          //use some backend for signalling as fallback/bootstrap
+          //let the page embedding this script handle the logic
+          //we just listen for their responses with an eventlistener
+          const signalingEvent = new CustomEvent('signalingMessage', { detail: value });
+          window.dispatchEvent(signalingEvent);
+        }
+      });
+
+      window.addEventListener('signalingBackendMessage', (event) => {
+        const message = event.detail;
+        //console.log('Received signaling message:', message);
+        window.parent.postMessage({ action: "backend_signal", value: message }, window.parent.origin);
+      });
+
+      if (window.parent) {
+        let saved_state = JSON.parse(localStorage.getItem("saved_state"));
+        let stored_offers = JSON.parse(localStorage.getItem("stored_offers"));
+        let resume_obj = { attemptResume: saved_state, stored_offers: stored_offers }
+        window.parent.postMessage({ action: "resume", value: resume_obj }, window.parent.origin);
+      }
+
+      //page builder
+      document.getElementById('inkwell-configurator').value = window.location.host;
+      document.getElementById("generate-link").addEventListener("click", async () => {
+        let inkwell = document.getElementById("inkwell-configurator").value;
+        let js = document.getElementById("storyweave-script").innerHTML;
+        let link = `<a href="javascript:(function(){${encodeURIComponent(`window.storageHost = '${inkwell}';` + js)}}());"> Toggle Storyweaver </a>
             <div>Drag this link to your bookmark bar to use it anywhere.</div>
             <div>When your weaving meets obstacles, you will be returned to your inkwell to continue.</div>`;
-      let element = document.getElementById("bookmarklet-link");
-      element.innerHTML = link;
-    });
-  } else if (maybeExtant) {
-    maybeExtant.style.visibility == "hidden" ?
-      maybeExtant.style.visibility = "visible" :
-      maybeExtant.style.visibility = "hidden";
-  } else {
-    let storageUrlPrefix = "https://"
-    let storageUrlPostfix = "/inkwell.html"
-    let storageUrl = storageUrlPrefix + storageHost + storageUrlPostfix;
-    let inner = `
+        let element = document.getElementById("bookmarklet-link");
+        element.innerHTML = link;
+      });
+    } else if (maybeExtant) {
+      maybeExtant.style.visibility == "hidden" ?
+        maybeExtant.style.visibility = "visible" :
+        maybeExtant.style.visibility = "hidden";
+    } else {
+      let storageUrlPrefix = "https://"
+      let storageUrlPostfix = "/inkwell.html"
+      let storageUrl = storageUrlPrefix + storageHost + storageUrlPostfix;
+      const autoSignaling = {
+        makeLocalId: function (id) {
+          document.getElementById("storyweaver-storage-view").contentWindow.postMessage({ action: 'fallback_signal', key: "id", value: id }, storageUrlPrefix + storageHost);
+        },
+        makeSdpReciever: function (sdpr) {
+          document.getElementById("storyweaver-storage-view").contentWindow.postMessage({ action: 'fallback_signal', key: "reciever_sdp", value: sdpr }, storageUrlPrefix + storageHost);
+        },
+        makeSdpSender: function (sender) {
+          document.getElementById("storyweaver-storage-view").contentWindow.postMessage({ action: 'fallback_signal', key: "sender_sdp", value: sender }, storageUrlPrefix + storageHost);
+        },
+        makeManualSignal: function (signal) {
+          document.getElementById("storyweaver-storage-view").contentWindow.postMessage({ action: 'fallback_signal', key: "manual_signal", value: signal }, storageUrlPrefix + storageHost);
+        }
+      };
+      let inner = `
       <!DOCTYPE html>
       <html lang="en">
           <head></head>
@@ -219,417 +219,417 @@
           </body>
       </html>
       `;
-  
-    let main = document.createElement("div");
-    main.innerHTML = inner;
-    let body = document.body;
-    body.appendChild(main);
-    let storageHandler = document.getElementById("storyweaver-storage-view");
-    let iframeDoc = storageHandler.contentDocument || storageHandler.contentWindow.document;
-    let storageOnline = iframeDoc.readyState;
-  
-    if (checkForParticipatingDiv()) {
-      let maybeExtant = document.getElementById("storyweave-main-container");
-      if (!maybeExtant.style.visibility) { maybeExtant.style.visibility = "visible" } else {
-        maybeExtant.style.visibility == "hidden" ?
-          maybeExtant.style.visibility = "visible" :
-          maybeExtant.style.visibility = "hidden";
-      }
-    }
-  
-    window.addEventListener('message', (event) => {
-      if (event.origin !== storageUrlPrefix + storageHost) return;
-  
-      const { action, key, value } = event.data;
-  
-      if (action === 'response') {
-        // Handle the received data from the iframe's localstorage
-        //console.log(`Received data for key "${key}":`, value);
-      } else if (action === 'resume') {
-  
-        resumeConnectionsAndStoredOffers(value.attemptResume, value.stored_offers);
-      } else if (action === 'backend_signal') {
 
-        routeSignalingMessage(value)
+      let main = document.createElement("div");
+      main.innerHTML = inner;
+      let body = document.body;
+      body.appendChild(main);
+      let storageHandler = document.getElementById("storyweaver-storage-view");
+      let iframeDoc = storageHandler.contentDocument || storageHandler.contentWindow.document;
+      let storageOnline = iframeDoc.readyState;
+
+      if (checkForParticipatingDiv()) {
+        let maybeExtant = document.getElementById("storyweave-main-container");
+        if (!maybeExtant.style.visibility) { maybeExtant.style.visibility = "visible" } else {
+          maybeExtant.style.visibility == "hidden" ?
+            maybeExtant.style.visibility = "visible" :
+            maybeExtant.style.visibility = "hidden";
+        }
       }
-    });
-  
-    document.addEventListener("click", (e) => {
-      let clickType = e.target.id;
-      e.target.classList.add("sheen-effect");
-      switch (clickType) {
-        case 'top-story':
-        case 'back-story':
-        case 'fwd-story':
-        case 'reque-story':
-        case 'next-story':
-        case 'pos-tag':
-        case 'neg-tag':
-        case 'report':
-        case 'pos-usr':
-        case 'neg-usr':
-          break;
-        case 'request-view':
-          var otherPeer = document.getElementById("other-peer").checkValidity();
-          if (otherPeer){
-            document.getElementById("connection-content").style.setProperty("--offer-visible", "block");
-            document.getElementById("connection-content").style.setProperty("--answer-visible", "none");
-            document.getElementById("other-peer").disabled = true;
-          } else {
+
+      window.addEventListener('message', (event) => {
+        if (event.origin !== storageUrlPrefix + storageHost) return;
+
+        const { action, key, value } = event.data;
+
+        if (action === 'response') {
+          // Handle the received data from the iframe's localstorage
+          //console.log(`Received data for key "${key}":`, value);
+        } else if (action === 'resume') {
+
+          resumeConnectionsAndStoredOffers(value.attemptResume, value.stored_offers);
+        } else if (action === 'backend_signal') {
+
+          routeSignalingMessage(value)
+        }
+      });
+
+      document.addEventListener("click", (e) => {
+        let clickType = e.target.id;
+        e.target.classList.add("sheen-effect");
+        switch (clickType) {
+          case 'top-story':
+          case 'back-story':
+          case 'fwd-story':
+          case 'reque-story':
+          case 'next-story':
+          case 'pos-tag':
+          case 'neg-tag':
+          case 'report':
+          case 'pos-usr':
+          case 'neg-usr':
+            break;
+          case 'request-view':
+            var otherPeer = document.getElementById("other-peer").checkValidity();
+            if (otherPeer) {
+              document.getElementById("connection-content").style.setProperty("--offer-visible", "block");
+              document.getElementById("connection-content").style.setProperty("--answer-visible", "none");
+              document.getElementById("other-peer").disabled = true;
+            } else {
+              document.getElementById("connection-content").style.setProperty("--answer-visible", "none");
+              document.getElementById("connection-content").style.setProperty("--offer-visible", "none");
+              document.getElementById("other-peer").disabled = false;
+            }
+            e.target.classList.remove("sheen-effect");
+            break;
+          case 'answer-view':
+            var otherPeer = document.getElementById("other-peer").checkValidity();
+            if (otherPeer) {
+              document.getElementById("connection-content").style.setProperty("--offer-visible", "none");
+              document.getElementById("connection-content").style.setProperty("--answer-visible", "block");
+              document.getElementById("other-peer").disabled = true;
+            } else {
+              document.getElementById("connection-content").style.setProperty("--answer-visible", "none");
+              document.getElementById("connection-content").style.setProperty("--offer-visible", "none");
+              document.getElementById("other-peer").disabled = false;
+            }
+            e.target.classList.remove("sheen-effect");
+            break;
+          case 'reset-view':
+            document.getElementById("other-peer").value = "";
             document.getElementById("connection-content").style.setProperty("--answer-visible", "none");
             document.getElementById("connection-content").style.setProperty("--offer-visible", "none");
+            document.getElementById("answer-view").style.setProperty("display", "inline");
+            document.getElementById("request-view").style.setProperty("display", "inline");
             document.getElementById("other-peer").disabled = false;
-          }
-          e.target.classList.remove("sheen-effect");
-          break;
-        case 'answer-view':
-          var otherPeer = document.getElementById("other-peer").checkValidity();
-          if (otherPeer){
-            document.getElementById("connection-content").style.setProperty("--offer-visible", "none");
-            document.getElementById("connection-content").style.setProperty("--answer-visible", "block");
-            document.getElementById("other-peer").disabled = true;
-          } else {
-            document.getElementById("connection-content").style.setProperty("--answer-visible", "none");
-            document.getElementById("connection-content").style.setProperty("--offer-visible", "none");
-            document.getElementById("other-peer").disabled = false;
-          }
-          e.target.classList.remove("sheen-effect");
-          break;
-        case 'reset-view':
-          document.getElementById("other-peer").value = "";
-          document.getElementById("connection-content").style.setProperty("--answer-visible", "none");
-          document.getElementById("connection-content").style.setProperty("--offer-visible", "none");
-          document.getElementById("answer-view").style.setProperty("display", "inline");
-          document.getElementById("request-view").style.setProperty("display", "inline");
-          document.getElementById("other-peer").disabled = false;
-          document.getElementById("other-offer").disabled = false;
-          document.getElementById("answer-offer").disabled = false;
-          e.target.classList.remove("sheen-effect");
-          break;
-        case 'network-status':
-          if (document.getElementById("other-offer").checkValidity() ||
+            document.getElementById("other-offer").disabled = false;
+            document.getElementById("answer-offer").disabled = false;
+            e.target.classList.remove("sheen-effect");
+            break;
+          case 'network-status':
+            if (document.getElementById("other-offer").checkValidity() ||
               document.getElementById("answer-offer").checkValidity()
-            ){
+            ) {
               document.getElementById("answer-view").style.setProperty("display", "none");
               document.getElementById("request-view").style.setProperty("display", "none");
               manualConnectPeer(
                 document.getElementById("other-peer").value,
-                document.getElementById("other-offer").value+'\n',
-                document.getElementById("answer-offer").value+'\n'
+                document.getElementById("other-offer").value + '\n',
+                document.getElementById("answer-offer").value + '\n'
               );
-              setTimeout(function() {
+              setTimeout(function () {
                 document.getElementById('network-status').innerText = "Connection Starting...";
               }, 0);
             } else {
               document.getElementById("other-offer").disabled = false;
               document.getElementById("answer-offer").disabled = false;
-              setTimeout(function() {
+              setTimeout(function () {
                 document.getElementById('network-status').innerText = "Retry Connection";
               }, 0);
               e.target.classList.remove("sheen-effect");
             }
             break;
-        case 'manual-router':
-          let signalInput = document.getElementById("manual-router");
-          try {
-            routeSignalingMessage(JSON.parse(signalInput.value));
-          } catch (e) {
-            console.info(e);
-            signalInput.setCustomValidity(e);
-          }
-        default:
-          e.target.classList.remove("sheen-effect");
-      }
-  
-    })
-  
-    // examples of using our storage api 
-    // document.getElementById("storyweaver-storage-view").contentWindow.postMessage({ action: 'set', key: 'example', value: 'your data' }, '${storageUrlPrefix+storageHost}');
-    // document.getElementById("storyweaver-storage-view").contentWindow.postMessage({ action: 'get', key: 'example' }, '${storageUrlPrefix+storageHost}');
-  
-  
-    let peerId = generatePeerId();
-    let connectedPeers = {};
-    let connectingPeers = {};
-    let via = {};
-    let aka = [];
-  
-    function generatePeerId() {
-      let id = Math.random().toString(36).slice(2, 18);
-      document.getElementById("peer-id").innerText = id;
-      autoSignaling.makeLocalId(id);
-      return id;
-    }
+          case 'manual-router':
+            let signalInput = document.getElementById("manual-router");
+            try {
+              routeSignalingMessage(JSON.parse(signalInput.value));
+            } catch (e) {
+              console.info(e);
+              signalInput.setCustomValidity(e);
+            }
+          default:
+            e.target.classList.remove("sheen-effect");
+        }
 
-    async function manualConnectPeer(peerId, maybeOffer, maybeAnswer){
-      if(maybeOffer != "\n"){
-        let maybeAnswer = await handleOffer(maybeOffer, peerId);
-        if (maybeAnswer) {
-          setTimeout(function() {
-            document.getElementById("other-offer").disabled = true;
-            document.getElementById("other-offer").value = "";
-            document.getElementById("local-answer").innerText = maybeAnswer;
-            autoSignaling.makeSdpReciever(maybeAnswer);
-            document.getElementById('network-status').innerText = "Please provide answer to other peer...";
+      })
+
+      // examples of using our storage api 
+      // document.getElementById("storyweaver-storage-view").contentWindow.postMessage({ action: 'set', key: 'example', value: 'your data' }, '${storageUrlPrefix+storageHost}');
+      // document.getElementById("storyweaver-storage-view").contentWindow.postMessage({ action: 'get', key: 'example' }, '${storageUrlPrefix+storageHost}');
+
+
+      let peerId = generatePeerId();
+      let connectedPeers = {};
+      let connectingPeers = {};
+      let via = {};
+      let aka = [];
+
+      function generatePeerId() {
+        let id = Math.random().toString(36).slice(2, 18);
+        document.getElementById("peer-id").innerText = id;
+        autoSignaling.makeLocalId(id);
+        return id;
+      }
+
+      async function manualConnectPeer(peerId, maybeOffer, maybeAnswer) {
+        if (maybeOffer != "\n") {
+          let maybeAnswer = await handleOffer(maybeOffer, peerId);
+          if (maybeAnswer) {
+            setTimeout(function () {
+              document.getElementById("other-offer").disabled = true;
+              document.getElementById("other-offer").value = "";
+              document.getElementById("local-answer").innerText = maybeAnswer;
+              autoSignaling.makeSdpReciever(maybeAnswer);
+              document.getElementById('network-status').innerText = "Please provide answer to other peer...";
+            }, 0);
+          }
+        } else if (maybeAnswer != "\n") {
+          handleAnswer(peerId, maybeAnswer);
+          setTimeout(function () {
+            document.getElementById("answer-offer").disabled = true;
+            document.getElementById("answer-offer").value = "";
+            document.getElementById('network-status').innerText = "Waiting for connection...";
+          }, 0);
+        } else {
+          let pc = createRTCPeerConnection(peerId);
+          let offer = await createOffer(pc, peerId);
+          setTimeout(function () {
+            autoSignaling.makeSdpSender(offer);
+            document.getElementById("spare-offer").innerText = offer;
+            document.getElementById('network-status').innerText = "Please provide offer to other peer...";
           }, 0);
         }
-      } else if (maybeAnswer != "\n"){
-        handleAnswer(peerId, maybeAnswer);
-        setTimeout(function() {
-          document.getElementById("answer-offer").disabled = true;
-          document.getElementById("answer-offer").value = "";
-          document.getElementById('network-status').innerText = "Waiting for connection...";
-        }, 0);
-      } else {
-        let pc = createRTCPeerConnection(peerId);
-        let offer = await createOffer(pc, peerId);
-        setTimeout(function() {
-          autoSignaling.makeSdpSender(offer);
-          document.getElementById("spare-offer").innerText = offer;
-          document.getElementById('network-status').innerText = "Please provide offer to other peer...";
-        }, 0);
+        return;
       }
-      return;
-    }
-  
-    function createRTCPeerConnection(peerId, config) {
-      const pc = new RTCPeerConnection(config);
-      pc.onicecandidate = (event) => {
-        if (event.candidate) {
-          routeSignalingMessage({ type: 'icecandidate', candidate: event.candidate, to: peerId });
-        }
-      };
-      pc.ondatachannel = (event) => {
-        const dc = event.channel;
-        dc.onmessage = handleMessage;
-        //handle remote data channel creation - local below
-        dc.onopen = (ev) => {
-          if (peerId) {
-            delete connectingPeers[peerId];
-            connectedPeers[peerId] = { connection: pc, channel: dc };
-            if(peerId == document.getElementById("other-peer").value){
-              setTimeout(function() {
-                document.getElementById('network-status').innerText = "Connected!";
-              }, 0);
-            }
-            sendGreetingMessage(peerId, ev.channel);
-          };
+
+      function createRTCPeerConnection(peerId, config) {
+        const pc = new RTCPeerConnection(config);
+        pc.onicecandidate = (event) => {
+          if (event.candidate) {
+            routeSignalingMessage({ type: 'icecandidate', candidate: event.candidate, to: peerId });
+          }
         };
-        dc.onclosing = (ev) => {
-          if(peerId == document.getElementById("other-peer").value){
-              setTimeout(function() {
+        pc.ondatachannel = (event) => {
+          const dc = event.channel;
+          dc.onmessage = handleMessage;
+          //handle remote data channel creation - local below
+          dc.onopen = (ev) => {
+            if (peerId) {
+              delete connectingPeers[peerId];
+              connectedPeers[peerId] = { connection: pc, channel: dc };
+              if (peerId == document.getElementById("other-peer").value) {
+                setTimeout(function () {
+                  document.getElementById('network-status').innerText = "Connected!";
+                }, 0);
+              }
+              sendGreetingMessage(peerId, ev.channel);
+            };
+          };
+          dc.onclosing = (ev) => {
+            if (peerId == document.getElementById("other-peer").value) {
+              setTimeout(function () {
                 document.getElementById('network-status').innerText = "Closing...";
               }, 0);
             }
-        };
-        dc.onclose = (ev) => {
-          if(peerId == document.getElementById("other-peer").value){
-              setTimeout(function() {
+          };
+          dc.onclose = (ev) => {
+            if (peerId == document.getElementById("other-peer").value) {
+              setTimeout(function () {
                 document.getElementById('network-status').innerText = "Closed.";
               }, 0);
             }
+          };
         };
-      };
-      pc.onconnectionstatechange = (_) => {
-        switch (pc.connectionState) {
-          case "connected":
-            createDataChannel(pc, peerId);
-          case "new":
-          case "checking":
-          case "disconnected":
-          case "closed":
-          case "failed":
-          default:
-            break;
+        pc.onconnectionstatechange = (_) => {
+          switch (pc.connectionState) {
+            case "connected":
+              createDataChannel(pc, peerId);
+            case "new":
+            case "checking":
+            case "disconnected":
+            case "closed":
+            case "failed":
+            default:
+              break;
+          }
         }
+        //create dummy channel so m line is set for offer/answer
+        pc.createDataChannel("null");
+        return pc;
       }
-      //create dummy channel so m line is set for offer/answer
-      pc.createDataChannel("null");
-      return pc;
-    }
-  
-    function createDataChannel(pc, peerId) {
-      const dc = pc.createDataChannel(peerId);
-      dc.onmessage = handleMessage;
-      //handle local data channel creation
-      dc.onopen = (ev) => sendGreetingMessage(peerId, ev.channel);
-      return dc;
-    }
-  
-    async function createOffer(pc, peerId) {
-      const offer = await pc.createOffer();
-      await pc.setLocalDescription(offer);
-      connectingPeers[peerId] = pc;
-      return offer.sdp;
-    }
-  
-    async function rejectOffer(rejectPeerId, as) {
-      routeSignalingMessage({ type: 'reject', to: rejectPeerId, from: as ? as : peerId })
-    }
-  
-    async function handleOffer(offer, from, as) {
-      if (connectedPeers[from]) {
-        let offerToStore = { peerId: from, offer: offer, as: as ? as : peerId };
-        document.getElementById("storyweaver-storage-view").contentWindow.postMessage({ action: 'set', key: "last_stored_offer", value: offerToStore }, storageUrlPrefix + storageHost);
-        document.getElementById("storyweaver-storage-view").contentWindow.postMessage({ action: 'store_offer', value: offerToStore }, storageUrlPrefix + storageHost);
-        routeSignalingMessage({ type: 'offerStored', from: peerId, to: from });
-      } else if (aka.includes(from)) {
-        rejectOffer(from, as);
-      } else {
-        const pc = createRTCPeerConnection(from);
-        await pc.setRemoteDescription(new RTCSessionDescription({type: "offer", sdp: offer}));
-        const answer = await pc.createAnswer();
-        await pc.setLocalDescription(answer);
-        routeSignalingMessage({ type: 'answer', sdp: answer.sdp, to: from, from: as });
-        return answer.sdp;
+
+      function createDataChannel(pc, peerId) {
+        const dc = pc.createDataChannel(peerId);
+        dc.onmessage = handleMessage;
+        //handle local data channel creation
+        dc.onopen = (ev) => sendGreetingMessage(peerId, ev.channel);
+        return dc;
       }
-    }
-  
-    async function handleAnswer(from, answer) {
-      if (connectingPeers[from]) {
-        await connectingPeers[from].setRemoteDescription(new RTCSessionDescription({type: "answer", sdp: answer})).then(() => {
-          delete via[from];
-        });
-      } else if (!connectedPeers[from]) {
-        const pc = createRTCPeerConnection(from);
-        const offer = await createOffer(pc, from);
-        await pc.setRemoteDescription(new RTCSessionDescription({type: "answer", sdp: answer}));
-        routeSignalingMessage({ type: 'offer', sdp: offer.sdp, to: from });
-      } else {
-        rejectOffer(from);
+
+      async function createOffer(pc, peerId) {
+        const offer = await pc.createOffer();
+        await pc.setLocalDescription(offer);
+        connectingPeers[peerId] = pc;
+        return offer.sdp;
       }
-    }
-  
-    function sendGreetingMessage(to, channel) {
-      channel.send(JSON.stringify({
-        type: 'greeting',
-        from: peerId,
-        to: to,
-        connectedPeers: Object.keys(connectedPeers)
-      }));
-    }
-  
-    function handleMessage(event) {
-      const message = JSON.parse(event.data);
-      //console.log(message);
-      handleMessageInner(message);
-    }
-  
-    function handleMessageInner(message) {
-      switch (message.type) {
-        case 'greeting':
-          handleGreetingMessage(message);
-          break;
-        case 'offer':
-          handleOffer(message.offer, message.from);
-          break;
-        case 'answer':
-          handleAnswer(message.answer, message.from);
-          break;
-        case 'icecandidate':
-          handleIceCandidate(message.candidate, message.from);
-          break;
-        case 'routed':
-          routeSignalingMessage(message);
-          break;
-        case 'reject':
-          handleReject(message.from);
-          break;
-        default:
-          console.info('Unknown message type:', message.type);
+
+      async function rejectOffer(rejectPeerId, as) {
+        routeSignalingMessage({ type: 'reject', to: rejectPeerId, from: as ? as : peerId })
       }
-    }
-  
-    function handleReject(from) {
-      let { pc, dc } = connectedPeers[from];
-      pc.close();
-      delete connectedPeers[from];
-    }
-  
-    function handleIceCandidate(candidate, peerId) {
-      const peerConnection = connectedPeers[peerId]?connectedPeers[peerId].connection:connectingPeers[peerId];
-      if (peerConnection) {
-        peerConnection.addIceCandidate(new RTCIceCandidate(candidate)).catch((error) => {
-          console.error('Error adding received ice candidate:', error);
-        });
-      } else {
-        console.error('Peer connection not found for received ice candidate from peer: ' + peerId);
-      }
-    }
-  
-    async function handleGreetingMessage(message) {
-      const { from, connectedPeers: newPeers } = message;
-      const peerIdsToConnect = newPeers.filter(peerId => !connectedPeers[peerId]);
-      for (const peerId of peerIdsToConnect) {
-        via[peerId] = from;
-      }
-      await createAndSendOffers(peerIdsToConnect);
-    }
-  
-    async function createAndSendOffers(peerIds) {
-      for (const peerId of peerIds) {
-        const pc = createRTCPeerConnection(peerId);
-        const offer = await createOffer(pc, peerId);
-        connectedPeers[peerId] = { connection: pc, channel: dc };
-        routeSignalingMessage({ type: 'offer', sdp: offer.sdp, to: peerId });
-      }
-    }
-  
-    function routeSignalingMessage(message) {
-      console.info(message);
-      if (!message.from) {
-        message.from = peerId;
-      }
-      if (message.to == peerId || aka.includes(message.to)) {
-        if (message.type == 'routed') {
-          handleMessageInner(message.inner);
+
+      async function handleOffer(offer, from, as) {
+        if (connectedPeers[from]) {
+          let offerToStore = { peerId: from, offer: offer, as: as ? as : peerId };
+          document.getElementById("storyweaver-storage-view").contentWindow.postMessage({ action: 'set', key: "last_stored_offer", value: offerToStore }, storageUrlPrefix + storageHost);
+          document.getElementById("storyweaver-storage-view").contentWindow.postMessage({ action: 'store_offer', value: offerToStore }, storageUrlPrefix + storageHost);
+          routeSignalingMessage({ type: 'offerStored', from: peerId, to: from });
+        } else if (aka.includes(from)) {
+          rejectOffer(from, as);
         } else {
-          handleMessageInner(message);
+          const pc = createRTCPeerConnection(from);
+          await pc.setRemoteDescription(new RTCSessionDescription({ type: "offer", sdp: offer }));
+          const answer = await pc.createAnswer();
+          await pc.setLocalDescription(answer);
+          routeSignalingMessage({ type: 'answer', sdp: answer.sdp, to: from, from: as });
+          return answer.sdp;
         }
-      } else if (connectedPeers[via[message.to]]) {
-        connectedPeers[via[message.to]].channel.send(JSON.stringify({
-          type: 'routed',
-          from: message.from,
-          to: message.to,
-          inner: message
+      }
+
+      async function handleAnswer(from, answer) {
+        if (connectingPeers[from]) {
+          await connectingPeers[from].setRemoteDescription(new RTCSessionDescription({ type: "answer", sdp: answer })).then(() => {
+            delete via[from];
+          });
+        } else if (!connectedPeers[from]) {
+          const pc = createRTCPeerConnection(from);
+          const offer = await createOffer(pc, from);
+          await pc.setRemoteDescription(new RTCSessionDescription({ type: "answer", sdp: answer }));
+          routeSignalingMessage({ type: 'offer', sdp: offer.sdp, to: from });
+        } else {
+          rejectOffer(from);
+        }
+      }
+
+      function sendGreetingMessage(to, channel) {
+        channel.send(JSON.stringify({
+          type: 'greeting',
+          from: peerId,
+          to: to,
+          connectedPeers: Object.keys(connectedPeers)
         }));
-      } else if (message.to == document.getElementById("other-peer").value) {
-        // Manual signalling, stored in UI
-        autoSignaling.makeManualSignal(JSON.stringify(message));
-        document.getElementById("manual-signals").innerText += JSON.stringify(message);
-      } else if (connectedPeers[message.to]) {
-        connectedPeers[message.to].channel.send(JSON.stringify(message.inner));
-      } else {
-        console.info('No route found for the destination peer: ' + message.to + ', pruning');
       }
-    }
-  
-    async function resumeConnectionsAndStoredOffers(attemptResume, stored_offers) {
-      const resumedConnections = [];
-  
-      for (const peerId in attemptResume) {
-        const [localDescriptor, remoteDescriptor] = attemptResume[peerId];
-        try {
+
+      function handleMessage(event) {
+        const message = JSON.parse(event.data);
+        //console.log(message);
+        handleMessageInner(message);
+      }
+
+      function handleMessageInner(message) {
+        switch (message.type) {
+          case 'greeting':
+            handleGreetingMessage(message);
+            break;
+          case 'offer':
+            handleOffer(message.offer, message.from);
+            break;
+          case 'answer':
+            handleAnswer(message.answer, message.from);
+            break;
+          case 'icecandidate':
+            handleIceCandidate(message.candidate, message.from);
+            break;
+          case 'routed':
+            routeSignalingMessage(message);
+            break;
+          case 'reject':
+            handleReject(message.from);
+            break;
+          default:
+            console.info('Unknown message type:', message.type);
+        }
+      }
+
+      function handleReject(from) {
+        let { pc, dc } = connectedPeers[from];
+        pc.close();
+        delete connectedPeers[from];
+      }
+
+      function handleIceCandidate(candidate, peerId) {
+        const peerConnection = connectedPeers[peerId] ? connectedPeers[peerId].connection : connectingPeers[peerId];
+        if (peerConnection) {
+          peerConnection.addIceCandidate(new RTCIceCandidate(candidate)).catch((error) => {
+            console.error('Error adding received ice candidate:', error);
+          });
+        } else {
+          console.error('Peer connection not found for received ice candidate from peer: ' + peerId);
+        }
+      }
+
+      async function handleGreetingMessage(message) {
+        const { from, connectedPeers: newPeers } = message;
+        const peerIdsToConnect = newPeers.filter(peerId => !connectedPeers[peerId]);
+        for (const peerId of peerIdsToConnect) {
+          via[peerId] = from;
+        }
+        await createAndSendOffers(peerIdsToConnect);
+      }
+
+      async function createAndSendOffers(peerIds) {
+        for (const peerId of peerIds) {
           const pc = createRTCPeerConnection(peerId);
-          await pc.setLocalDescription(localDescriptor);
-          await pc.setRemoteDescription(remoteDescriptor);
-          pc.restartIce();
-        } catch (error) {
-          console.error('Failed to resume connection:', error);
+          const offer = await createOffer(pc, peerId);
+          connectedPeers[peerId] = { connection: pc, channel: dc };
+          routeSignalingMessage({ type: 'offer', sdp: offer.sdp, to: peerId });
         }
       }
-  
-      for (const peerId in stored_offers) {
-        const [asPeerId, offer] = stored_offers[peerId];
-        try {
-          aka.push(asPeerId);
-          await handleOffer(offer, peerId, asPeerId);
-        } catch (error) {
-          console.error('Failed to answer stored offer:', error);
+
+      function routeSignalingMessage(message) {
+        console.info(message);
+        if (!message.from) {
+          message.from = peerId;
+        }
+        if (message.to == peerId || aka.includes(message.to)) {
+          if (message.type == 'routed') {
+            handleMessageInner(message.inner);
+          } else {
+            handleMessageInner(message);
+          }
+        } else if (connectedPeers[via[message.to]]) {
+          connectedPeers[via[message.to]].channel.send(JSON.stringify({
+            type: 'routed',
+            from: message.from,
+            to: message.to,
+            inner: message
+          }));
+        } else if (message.to == document.getElementById("other-peer").value) {
+          // Manual signalling, stored in UI
+          autoSignaling.makeManualSignal(JSON.stringify(message));
+          document.getElementById("manual-signals").innerText += JSON.stringify(message);
+        } else if (connectedPeers[message.to]) {
+          connectedPeers[message.to].channel.send(JSON.stringify(message.inner));
+        } else {
+          console.info('No route found for the destination peer: ' + message.to + ', pruning');
+        }
+      }
+
+      async function resumeConnectionsAndStoredOffers(attemptResume, stored_offers) {
+        const resumedConnections = [];
+
+        for (const peerId in attemptResume) {
+          const [localDescriptor, remoteDescriptor] = attemptResume[peerId];
+          try {
+            const pc = createRTCPeerConnection(peerId);
+            await pc.setLocalDescription(localDescriptor);
+            await pc.setRemoteDescription(remoteDescriptor);
+            pc.restartIce();
+          } catch (error) {
+            console.error('Failed to resume connection:', error);
+          }
+        }
+
+        for (const peerId in stored_offers) {
+          const [asPeerId, offer] = stored_offers[peerId];
+          try {
+            aka.push(asPeerId);
+            await handleOffer(offer, peerId, asPeerId);
+          } catch (error) {
+            console.error('Failed to answer stored offer:', error);
+          }
         }
       }
     }
-  }
   </script>
 </body>
 
