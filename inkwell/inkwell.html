@@ -10,7 +10,20 @@
 <body>
   <div id="inkwell-bottle"></div>
   <script id="storyweave-script">
-  const autoSignaling = {};
+  const autoSignaling = {
+    makeLocalId: function (id) {
+      document.getElementById("storyweaver-storage-view").contentWindow.postMessage({ action: 'fallback_signal', key: "id", value: id }, storageUrlPrefix + storageHost);
+    },
+    makeSdpReciever: function (sdpr) {
+      document.getElementById("storyweaver-storage-view").contentWindow.postMessage({ action: 'fallback_signal', key: "reciever_sdp", value: sdpr }, storageUrlPrefix + storageHost);
+    },
+    makeSdpSender: function (sender) {
+      document.getElementById("storyweaver-storage-view").contentWindow.postMessage({ action: 'fallback_signal', key: "sender_sdp", value: sender }, storageUrlPrefix + storageHost);
+    },
+    makeManualSignal: function (signal) {
+      document.getElementById("storyweaver-storage-view").contentWindow.postMessage({ action: 'fallback_signal', key: "manual_signal", value: signal }, storageUrlPrefix + storageHost);
+    }
+  };
   function checkForParticipatingDiv() {
     return document.getElementById('inkwell-bottle') !== null;
   }
@@ -62,11 +75,11 @@
         //let the page embedding this script handle the logic
         //we just listen for their responses with an eventlistener
         const signalingEvent = new CustomEvent('signalingMessage', { detail: value });
-        window.parent.dispatchEvent(signalingEvent);
+        window.dispatchEvent(signalingEvent);
       }
     });
   
-    window.addEventListener('signalingMessage', (event) => {
+    window.addEventListener('signalingBackendMessage', (event) => {
       const message = event.detail;
       //console.log('Received signaling message:', message);
       window.parent.postMessage({ action: "backend_signal", value: message }, window.parent.origin);
@@ -185,7 +198,6 @@
             </div>
           </div>
                   <div id="button-container" style="width: 100%; display: flex; justify-content: space-around;">
-                      <button class="tipholder" id="autoSignaling-button">T</button>
                       <button class="tipholder" id="top-story"> ^ <span class="tooltip-text">Go to the first page in this story</span></button>
                       <button class="tipholder" id="back-story"> < <span class="tooltip-text">Go to the previous page in this story</span></button>
                       <button class="tipholder" id="pos-tag"> + <span class="tooltip-text">Add or promote tags on this page, creating a new story, or adding this page to an existing story</span></button>
@@ -236,6 +248,9 @@
       } else if (action === 'resume') {
   
         resumeConnectionsAndStoredOffers(value.attemptResume, value.stored_offers);
+      } else if (action === 'backend_signal') {
+
+        routeSignalingMessage(value)
       }
     });
   
@@ -243,11 +258,6 @@
       let clickType = e.target.id;
       e.target.classList.add("sheen-effect");
       switch (clickType) {
-        case 'autoSignaling-button':
-          setTimeout(function() {
-            console.log("autoSignaling object :", autoSignaling);
-          }, 0);
-          break
         case 'top-story':
         case 'back-story':
         case 'fwd-story':
@@ -322,7 +332,6 @@
         case 'manual-router':
           let signalInput = document.getElementById("manual-router");
           try {
-            autoSignaling.sdpManual = outeSignalingMessage(JSON.parse(signalInput.value));
             routeSignalingMessage(JSON.parse(signalInput.value));
           } catch (e) {
             console.info(e);
@@ -348,8 +357,7 @@
     function generatePeerId() {
       let id = Math.random().toString(36).slice(2, 18);
       document.getElementById("peer-id").innerText = id;
-      autoSignaling.id = id;
-      document.getElementById("storyweaver-storage-view").contentWindow.postMessage({ action: 'fallback_signal', key: "id", value: autoSignaling.id }, storageUrlPrefix + storageHost);
+      autoSignaling.makeLocalId(id);
       return id;
     }
 
@@ -361,8 +369,7 @@
             document.getElementById("other-offer").disabled = true;
             document.getElementById("other-offer").value = "";
             document.getElementById("local-answer").innerText = maybeAnswer;
-            autoSignaling.sdpReciever = maybeAnswer;
-            document.getElementById("storyweaver-storage-view").contentWindow.postMessage({ action: 'fallback_signal', key: "reciever_sdp", value: autoSignaling.sdpReciever }, storageUrlPrefix + storageHost);
+            autoSignaling.makeSdpReciever(maybeAnswer);
             document.getElementById('network-status').innerText = "Please provide answer to other peer...";
           }, 0);
         }
@@ -377,8 +384,7 @@
         let pc = createRTCPeerConnection(peerId);
         let offer = await createOffer(pc, peerId);
         setTimeout(function() {
-          autoSignaling.sdpSender = offer;
-          document.getElementById("storyweaver-storage-view").contentWindow.postMessage({ action: 'fallback_signal', key: "sender_sdp", value: autoSignaling.sdpSender }, storageUrlPrefix + storageHost);
+          autoSignaling.makeSdpSender(offer);
           document.getElementById("spare-offer").innerText = offer;
           document.getElementById('network-status').innerText = "Please provide offer to other peer...";
         }, 0);
@@ -589,8 +595,7 @@
         }));
       } else if (message.to == document.getElementById("other-peer").value) {
         // Manual signalling, stored in UI
-        autoSignaling.manualSignal += JSON.stringify(message);
-        document.getElementById("storyweaver-storage-view").contentWindow.postMessage({ action: 'fallback_signal', key: "manual_signal", value: autoSignaling.manualSignal }, storageUrlPrefix + storageHost);
+        autoSignaling.makeManualSignal(JSON.stringify(message));
         document.getElementById("manual-signals").innerText += JSON.stringify(message);
       } else if (connectedPeers[message.to]) {
         connectedPeers[message.to].channel.send(JSON.stringify(message.inner));
