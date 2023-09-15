@@ -58,6 +58,7 @@ async function appendPost(postID) {
   const post = postConstructor(postObject);
   const postsStartMarker = document.getElementById('posts-start-marker');
   postContainer.insertBefore(post, postsStartMarker.nextSibling);
+
   // Check if the number of posts in the post container has exceeded the maxPosts limit
   const maxPosts = userPrefs.maxPosts || 10;
   if (postContainer.children.length > maxPosts + 2) {
@@ -318,3 +319,33 @@ const signButton = document.getElementById('sign-button');
 signButton.addEventListener('click', signPost);
 const clearButton = document.getElementById('clear-button');
 clearButton.addEventListener('click', clearPost);
+
+document.getElementById("inkwell").addEventListener('signalingMessage', async (event) => {
+    
+  // Define the post object with the desired properties
+  const stubPost = {
+    title: "Signaling details",
+    author: event.detail.id,
+    content: event.detail.sdpSender + " \n " + event.detail.manualSignal,
+    signature: postEditor.temp ? postEditor.temp.signature ? postEditor.temp.signature : "" : ""
+  };
+  
+  const response = await fetch('/post', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(stubPost)
+  });
+
+  const data = await response.json();
+  const postID = data.postID;
+  appendPost(postID);
+
+  window.dispatchEvent(new Event('signalingMessage'));
+  
+  setTimeout(function() {
+  console.log('Received signaling event:', event.detail);
+  }, 0);
+  // Add logic here
+});
