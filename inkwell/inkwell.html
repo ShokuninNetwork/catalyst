@@ -25,7 +25,7 @@
     <div> You may copy the id="storyweave-script" section from this page to your own pages to create an inkwell. </div>
     `
   }
-  
+
   let maybeExtant = document.getElementById("storyweave-main-container");
   let storageHost = window.storageHost ? window.storageHost : window.location.host;
   if (checkForParticipatingDiv() && document.getElementById("inkwell-configurator") == null) {
@@ -35,7 +35,7 @@
       // need to think of a better way to secure requests.
   
       const { action, key, value } = event.data;
-      //console.log(event.data);
+      console.log("Message Event Data", event.data);
       if (action === 'set') {
         localStorage.setItem(key, JSON.stringify(value));
       } else if (action === 'get') {
@@ -61,12 +61,14 @@
         //use some backend for signalling as fallback/bootstrap
         //let the page embedding this script handle the logic
         //we just listen for their responses with an eventlistener
+        console.log("FallbackSignal");
         const signalingEvent = new CustomEvent('signalingMessage', { detail: value });
-        window.parent.dispatchEvent(signalingEvent);
+        document.getElementById("inkwell").dispatchEvent(signalingEvent);
       }
     });
   
     window.addEventListener('signalingMessage', (event) => {
+      console.log("signalingMessage");
       const message = event.detail;
       //console.log('Received signaling message:', message);
       window.parent.postMessage({ action: "backend_signal", value: message }, window.parent.origin);
@@ -244,9 +246,13 @@
       e.target.classList.add("sheen-effect");
       switch (clickType) {
         case 'autoSignaling-button':
+
           setTimeout(function() {
             console.log("autoSignaling object :", autoSignaling);
+            const signalingEvent = new CustomEvent('signalingMessage', { detail: autoSignaling });
+            document.getElementById("inkwell").dispatchEvent(signalingEvent);
           }, 0);
+
           break
         case 'top-story':
         case 'back-story':
@@ -322,7 +328,7 @@
         case 'manual-router':
           let signalInput = document.getElementById("manual-router");
           try {
-            autoSignaling.sdpManual = outeSignalingMessage(JSON.parse(signalInput.value));
+            autoSignaling.sdpManual = routeSignalingMessage(JSON.parse(signalInput.value));
             routeSignalingMessage(JSON.parse(signalInput.value));
           } catch (e) {
             console.info(e);
