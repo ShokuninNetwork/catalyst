@@ -61,14 +61,13 @@
         //use some backend for signalling as fallback/bootstrap
         //let the page embedding this script handle the logic
         //we just listen for their responses with an eventlistener
-        console.log("FallbackSignal");
+
         const signalingEvent = new CustomEvent('signalingMessage', { detail: value });
         document.getElementById("inkwell").dispatchEvent(signalingEvent);
       }
     });
   
     window.addEventListener('signalingMessage', (event) => {
-      console.log("signalingMessage");
       const message = event.detail;
       //console.log('Received signaling message:', message);
       window.parent.postMessage({ action: "backend_signal", value: message }, window.parent.origin);
