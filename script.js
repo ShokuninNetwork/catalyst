@@ -324,7 +324,7 @@ document.getElementById("inkwell").addEventListener('signalingMessage', async (e
     
   // Define the post object with the desired properties
   const stubPost = {
-    title: "Signaling details",
+    title: "[Signal] Signaling details",
     author: event.detail.id,
     content: event.detail.sdpSender + " \n " + event.detail.manualSignal,
     signature: postEditor.temp ? postEditor.temp.signature ? postEditor.temp.signature : "" : ""
