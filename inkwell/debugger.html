@@ -51,5 +51,29 @@
 
 
     <script type="module" src="../script.js"></script>
+    <script>
+        window.addEventListener("message", function(message) {
+            if (event.origin === 'http://localhost:8080') {
+                document.getElementById('consoleOutput').innerHTML += `<p>${updateTime()} ${message.data}</p>`;
+
+                window.parent.postMessage('Hello from Iframe!', 'http://localhost:8080');
+            }
+        });
+        function updateTime() {
+            var now = new Date();
+        
+            var hours = now.getHours();
+            var minutes = now.getMinutes();
+            var seconds = now.getSeconds();
+            
+            // Format the time as HH:MM:SS
+            var formattedTime = hours.toString().padStart(2, '0') + ':' +
+                                minutes.toString().padStart(2, '0') + ':' +
+                                seconds.toString().padStart(2, '0');
+        
+            // Update the content of the element with ID 'timeDisplay'
+            return formattedTime;
+        }
+    </script>
 </body>
 </html>
