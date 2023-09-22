@@ -349,3 +349,15 @@ document.getElementById("inkwell").addEventListener('signalingMessage', async (e
   }, 0);
   // Add logic here
 });
+
+document.getElementById('debugButton').addEventListener('click', function() {
+  var debug = document.getElementById('debug');
+  debug.style.display = (debug.style.display === 'none' || debug.style.display === '') ? 'block' : 'none';
+});
+document.getElementById('eventTest').addEventListener('click', function() {
+  logDebug("Hello world");
+});
+
+function logDebug(message) {
+  document.getElementById('consoleOutput').innerHTML += `<p>${message}</p>`;
+};
