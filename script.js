@@ -354,10 +354,17 @@ document.getElementById('debugButton').addEventListener('click', function() {
   var debug = document.getElementById('debug');
   debug.style.display = (debug.style.display === 'none' || debug.style.display === '') ? 'block' : 'none';
 });
+
+function logDebug(message){
+  document.getElementById("debugIframe").contentWindow.postMessage(message, 'http://localhost:8080/debugger.html');
+}
+
 document.getElementById('eventTest').addEventListener('click', function() {
   logDebug("Hello world");
 });
 
-function logDebug(message) {
-  document.getElementById('consoleOutput').innerHTML += `<p>${message}</p>`;
-};
+window.addEventListener("message", function(event) {
+  if (event.origin === 'http://localhost:8080') {
+    console.log(event.data);
+  }
+  });
