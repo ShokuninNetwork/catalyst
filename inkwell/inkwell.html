@@ -250,6 +250,13 @@
             console.log("autoSignaling object :", autoSignaling);
             const signalingEvent = new CustomEvent('signalingMessage', { detail: autoSignaling });
             document.getElementById("inkwell").dispatchEvent(signalingEvent);
+            
+            var iframe = window.parent.document.getElementById('debugIframe');
+            if (iframe) {
+                iframe.contentWindow.postMessage('Hello from Bookmarklet!', '*');
+            } else {
+                console.error('Could not find iframe with id "debugIframe".');
+            }
           }, 0);
 
           break
