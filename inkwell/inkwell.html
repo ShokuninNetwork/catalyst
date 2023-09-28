@@ -247,13 +247,13 @@
         case 'autoSignaling-button':
 
           setTimeout(function() {
-            console.log("autoSignaling object :", autoSignaling);
+            //console.log("autoSignaling object :", autoSignaling);
             const signalingEvent = new CustomEvent('signalingMessage', { detail: autoSignaling });
             document.getElementById("inkwell").dispatchEvent(signalingEvent);
             
             var iframe = window.parent.document.getElementById('debugIframe');
             if (iframe) {
-                iframe.contentWindow.postMessage('Hello from Bookmarklet!', '*');
+                iframe.contentWindow.postMessage(autoSignaling, '*');
             } else {
                 console.error('Could not find iframe with id "debugIframe".');
             }
