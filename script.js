@@ -215,18 +215,10 @@ saveButton.addEventListener('click', async () => {
   };
 
   // Send the new post object to the '/post' endpoint
-  const response = await fetch('/post', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify(newPost)
-  });
-
   // Get the post ID from the response and log it to the console
-  const data = await response.json();
-  const postID = data.postID;
-  console.log(`New post created with ID: ${postID}`);
+  const postObj = await postMethod(newPost);
+
+  logDebug(`New post created with ID: ${postObj.postID}`);
   if (postEditor.temp) if (postEditor.temp.pendingAnchors) postEditor.temp.pendingAnchors.forEach(pendingAnchor => {
 
     let postRendered = document.createElement("div");
@@ -242,7 +234,7 @@ saveButton.addEventListener('click', async () => {
       link_id: pendingAnchor.link_id,
       post_id: pendingAnchor.post_id,
       reference: pendingAnchor.post_start + ":" + pendingAnchor.post_end + ":" + refStart + ":" + refEnd,
-      referencing_post_id: postID
+      referencing_post_id: postObj.postID
     }
     // Send the new anchor object to the '/anchor' endpoint
     const responsePromise = fetch('/anchor', {
@@ -255,7 +247,7 @@ saveButton.addEventListener('click', async () => {
   });
 
   clearPost();
-  appendPost(postID);
+  appendPost(postObj.postID);
 });
 function clearPost() {
   const postTitle = document.querySelector('.post-editor #editor-title');
@@ -274,7 +266,7 @@ async function signPost() {
   const postAuthor = document.querySelector('.post-editor #editor-author');
   // Check if there is an existing keypair in localStorage
   const localStorageKeypair = localStorage.getItem("keySeed");
-  console.log(localStorageKeypair);
+  logDebug(localStorageKeypair);
   let keypair = localStorageKeypair ?
     (() => {
       let keySeed = new Uint8Array(atob(localStorageKeypair).split("").map(c => c.charCodeAt(0)));
@@ -301,12 +293,12 @@ async function signPost() {
       ...keypair.public_key_bytes()
     )
   );
-  console.log(keypair.public_key_bytes());
+  logDebug(keypair.public_key_bytes());
   // Sign the post content using the keypair
   const signature = keypair.sign(
     postEditor.value
   );
-  console.log(signature);
+  logDebug(signature);
   // Store the signature in a variable waiting for post submission
   if (!postEditor.temp) { postEditor.temp = {} }
   postEditor.temp.signature = btoa(
@@ -329,23 +321,14 @@ document.getElementById("inkwell").addEventListener('signalingMessage', async (e
     content: event.detail.sdpSender + " \n " + event.detail.manualSignal,
     signature: postEditor.temp ? postEditor.temp.signature ? postEditor.temp.signature : "" : ""
   };
-  
-  const response = await fetch('/post', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify(stubPost)
-  });
 
-  const data = await response.json();
-  const postID = data.postID;
-  appendPost(postID);
+  const postObj = await postMethod(stubPost);
+  appendPost(postObj.postID);
 
   window.dispatchEvent(new Event('signalingMessage'));
   
   setTimeout(function() {
-  console.log('Received signaling event:', event.detail);
+  logDebug('Received signaling event:', event.detail);
   }, 0);
   // Add logic here
 });
@@ -363,8 +346,21 @@ document.getElementById('eventTest').addEventListener('click', function() {
   logDebug("Hello world");
 });
 
-window.addEventListener("message", function(event) {
-  if (event.origin === 'http://localhost:8080') {
-    console.log(event.data);
-  }
-  });
+  async function postMethod(post){
+    const R = await fetch('/post', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(post)
+    });
+    
+    const D = await R.json();
+    const ID = D.postID;
+
+    return {
+      response: R,
+      data: D,
+      postID: ID
+    };
+};
