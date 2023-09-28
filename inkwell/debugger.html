@@ -7,6 +7,7 @@
     <style>
         body {
             font-family: Arial, sans-serif;
+            background-color: #cccccc75;
         }
 
         nav {
@@ -57,6 +58,9 @@
                 document.getElementById('consoleOutput').innerHTML += `<p>${updateTime()} ${message.data}</p>`;
 
                 window.parent.postMessage('Hello from Iframe!', 'http://localhost:8080');
+            }
+            else{
+                document.getElementById('consoleOutput').innerHTML += `<p>${updateTime()} Who are you?</p>`;
             }
         });
         function updateTime() {
