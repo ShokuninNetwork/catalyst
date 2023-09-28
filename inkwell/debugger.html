@@ -53,16 +53,28 @@
 
     <script type="module" src="../script.js"></script>
     <script>
-        window.addEventListener("message", function(message) {
+        window.addEventListener("message", function(event) {
             if (event.origin === 'http://localhost:8080') {
-                document.getElementById('consoleOutput').innerHTML += `<p>${updateTime()} ${message.data}</p>`;
-
+                const consoleOutput = document.getElementById('consoleOutput');
+                const messageData = event.data;
+        
+                if (typeof messageData === 'object') {
+                    // If the message is an object, format it with line breaks
+                    const formattedMessage = JSON.stringify(messageData, null, 2)
+                        .replace(/\\n/g, '<br>')
+                        .replace(/ /g, '&nbsp;');
+        
+                    consoleOutput.innerHTML += `<p>${updateTime()} ${formattedMessage}</p>`;
+                } else {
+                    consoleOutput.innerHTML += `<p>${updateTime()} ${messageData}</p>`;
+                }
+        
                 window.parent.postMessage('Hello from Iframe!', 'http://localhost:8080');
-            }
-            else{
+            } else {
                 document.getElementById('consoleOutput').innerHTML += `<p>${updateTime()} Who are you?</p>`;
             }
         });
+        
         function updateTime() {
             var now = new Date();
         
