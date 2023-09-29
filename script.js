@@ -237,13 +237,7 @@ saveButton.addEventListener('click', async () => {
       referencing_post_id: postObj.postID
     }
     // Send the new anchor object to the '/anchor' endpoint
-    const responsePromise = fetch('/anchor', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(newAnchor)
-    });
+    // anchorMethod(anchor);
   });
 
   clearPost();
@@ -346,21 +340,33 @@ document.getElementById('eventTest').addEventListener('click', function() {
   logDebug("Hello world");
 });
 
-  async function postMethod(post){
-    const R = await fetch('/post', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(post)
-    });
+async function postMethod(post){
+  const R = await fetch('/post', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(post)
+  });
     
-    const D = await R.json();
-    const ID = D.postID;
+  const D = await R.json();
+  const ID = D.postID;
 
-    return {
-      response: R,
-      data: D,
-      postID: ID
-    };
+  return {
+    response: R,
+    data: D,
+    postID: ID
+  };
+};
+
+async function anchorMethod(anchor) {
+  const responsePromise = fetch('/anchor', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(anchor)
+  });
+
+  return responsePromise;
 };
