@@ -48,7 +48,7 @@ function postConstructor(postObject) {
   return post;
 }
 async function appendPost(postID) {
-  const postResponse = await fetch(`/post/${postID}`);
+  const postResponse = postResponse(postID);
   if (!postResponse.ok) {
     console.error(`Failed to load post ${postID}`);
     return;
@@ -67,7 +67,7 @@ async function appendPost(postID) {
   }
 }
 async function getUnfilteredAnchors(postId) {
-  const response = await fetch(`/post/${postId}/unfiltered_anchors`);
+  const response = postResponse(postId, "/unfiltered_anchors");
   if (!response.ok) {
     throw new Error(`Failed to fetch unfiltered anchors for post ${postId}: ${response.status} ${response.statusText}`);
   }
@@ -81,7 +81,7 @@ async function getUnfilteredAnchors(postId) {
 }
 
 async function getFilteredAnchors(postId) {
-  const response = await fetch(`/post/${postId}/anchors?max_posts=${userPrefs.maxPosts}&recency_days=${userPrefs.recencyDays}`);
+  const response = postResponse(postId, '/anchors?max_posts=${userPrefs.maxPosts}&recency_days=${userPrefs.recencyDays}');
   if (!response.ok) {
     throw new Error(`Failed to fetch filtered anchors for post ${postId}: ${response.status} ${response.statusText}`);
   }
@@ -340,6 +340,7 @@ document.getElementById('eventTest').addEventListener('click', function() {
   logDebug("Hello world");
 });
 
+
 async function postMethod(post){
   const R = await fetch('/post', {
     method: 'POST',
@@ -357,6 +358,9 @@ async function postMethod(post){
     data: D,
     postID: ID
   };
+};
+async function postResponse(postID, modifiers = ""){
+  return await fetch(`/post/${postID}${modifiers}`);
 };
 
 async function anchorMethod(anchor) {
