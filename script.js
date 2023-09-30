@@ -48,12 +48,12 @@ function postConstructor(postObject) {
   return post;
 }
 async function appendPost(postID) {
-  const postResponse = postResponse(postID);
-  if (!postResponse.ok) {
+  const response = await postResponse(postID);
+  if (!response.ok) {
     console.error(`Failed to load post ${postID}`);
     return;
   }
-  const postObject = await postResponse.json();
+  const postObject = await response.json();
   postObject.postID = postID;
   const post = postConstructor(postObject);
   const postsStartMarker = document.getElementById('posts-start-marker');
@@ -67,7 +67,7 @@ async function appendPost(postID) {
   }
 }
 async function getUnfilteredAnchors(postId) {
-  const response = postResponse(postId, "/unfiltered_anchors");
+  const response = await postResponse(postId, "/unfiltered_anchors");
   if (!response.ok) {
     throw new Error(`Failed to fetch unfiltered anchors for post ${postId}: ${response.status} ${response.statusText}`);
   }
@@ -81,7 +81,7 @@ async function getUnfilteredAnchors(postId) {
 }
 
 async function getFilteredAnchors(postId) {
-  const response = postResponse(postId, '/anchors?max_posts=${userPrefs.maxPosts}&recency_days=${userPrefs.recencyDays}');
+  const response = await postResponse(postId, '/anchors?max_posts=${userPrefs.maxPosts}&recency_days=${userPrefs.recencyDays}');
   if (!response.ok) {
     throw new Error(`Failed to fetch filtered anchors for post ${postId}: ${response.status} ${response.statusText}`);
   }
