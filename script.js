@@ -113,8 +113,8 @@ async function loadPosts() {
   // Set the query parameters based on the user preferences
   const queryParams = `?max_posts=${userPrefs.maxPosts}&recency_days=${userPrefs.recencyDays}`;
   // Fetch the list of posts from the backend API
-  const response = await fetch(`/posts${queryParams}`);
-  const posts = await response.json();
+  const response = await postResponse(queryParams);
+  const posts = response.data;
   // Get an array of post IDs
   const postIDs = Object.keys(posts);
   // Loop over the posts and create elements for each one
@@ -127,7 +127,7 @@ async function loadPosts() {
     // Add the post div to the post container
     postContainer.appendChild(postDiv);
   });
-}
+};
 // Call the function to load the posts into the post container
 loadPosts();
 // Add a button element to start creating a transformation
@@ -360,7 +360,17 @@ async function postMethod(post){
   };
 };
 async function postResponse(postID, modifiers = ""){
-  return await fetch(`/post/${postID}${modifiers}`);
+  if (postID.charAt(0) === '?') {
+    const R = await fetch(`/posts${postID}${modifiers}`);
+    const D = await R.json();
+
+    return{
+      response : R,
+      data : D
+    };
+  } else {
+    return await fetch(`/post/${postID}${modifiers}`);
+  }
 };
 
 async function anchorMethod(anchor) {
