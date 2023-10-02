@@ -113,6 +113,7 @@ async function loadPosts() {
   // Set the query parameters based on the user preferences
   const queryParams = `?max_posts=${userPrefs.maxPosts}&recency_days=${userPrefs.recencyDays}`;
   // Fetch the list of posts from the backend API
+  logDebug(queryParams);
   const response = await postResponse(queryParams);
   const posts = response.data;
   // Get an array of post IDs
@@ -332,9 +333,17 @@ document.getElementById('debugButton').addEventListener('click', function() {
   debug.style.display = (debug.style.display === 'none' || debug.style.display === '') ? 'block' : 'none';
 });
 
-function logDebug(message){
+async function logDebug(message) {
+  await new Promise((resolve) => {
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', resolve);
+    } else {
+      resolve();
+    }
+  });
+
   document.getElementById("debugIframe").contentWindow.postMessage(message, 'http://localhost:8080/debugger.html');
-}
+};
 
 document.getElementById('eventTest').addEventListener('click', function() {
   logDebug("Hello world");
@@ -359,6 +368,7 @@ async function postMethod(post){
     postID: ID
   };
 };
+
 async function postResponse(postID, modifiers = ""){
   if (postID.charAt(0) === '?') {
     const R = await fetch(`/posts${postID}${modifiers}`);
