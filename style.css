@@ -13,10 +13,11 @@ body {
 /* Define a style for the post container */
 .post-container {
     position: absolute;
-    left: 50vw;
+    left: 51vw;
+    top: 13vh;
     transform: translateX(calc(-50% + 6vw));
-    width: 85vw;
-    height: calc(100% - 1rem);
+    width: 80vw;
+    height: calc(83vh - 1rem);
     display: flex;
     gap: 10px;
     padding: 10px;
@@ -27,6 +28,7 @@ body {
     overflow-x: hidden;
     overflow-y: auto;
     font-family: inherit;
+    z-index: 8;
 }
 
 .post-container.small {
@@ -42,12 +44,13 @@ body {
 }
 
 footer {
-    height: fit-content;
-    width: 100%;
+    width: 100vw;
+    height: 3vh;
     display: flex;
     justify-content: center;
     position: absolute;
     bottom: 0;
+    z-index: 10;
 }
 
 
@@ -96,7 +99,7 @@ footer {
         flex-direction: column;
         justify-content: center;
         align-items: center;
-        z-index: 999;
+        z-index: 7;
     }
 
     .left-side {
@@ -117,6 +120,8 @@ footer {
         overflow: hidden;
         max-height: 500px; /* Adjust to the actual height */
         z-index: 5;
+        display: flex;
+        justify-content: center;
     }
     
     #inkwell.collapsed {
@@ -146,7 +151,7 @@ footer {
         background-color: #ffffff;
         color: #8d5fd3;
         cursor: pointer;
-        z-index: 999;
+        z-index: 7;
         transition: background-color 0.2s ease-in-out;
     }
 }
@@ -167,7 +172,7 @@ footer {
         flex-direction: column;
         justify-content: center;
         align-items: center;
-        z-index: 999;
+        z-index: 7;
     }
 
     .left-side {
@@ -218,7 +223,7 @@ footer {
         background-color: #ffffff;
         color: #8d5fd3;
         cursor: pointer;
-        z-index: 999;
+        z-index: 7;
         transition: background-color 0.2s ease-in-out;
     }
 }
@@ -246,10 +251,18 @@ button:hover {
     display: none;
 }
 #debugButton{
-    width: fit-content;
-    height: min-content;
+    width: 4vw;
+    height: 2vh;
+    font-size: 0.8em;
+    display: flex;
+    justify-content: center;
+    align-items: center;
 }
 #eventTest{
-    width: fit-content;
-    height: min-content;
+    width: 4vw;
+    height: 2vh;
+    font-size: 0.8em;
+    display: flex;
+    justify-content: center;
+    align-items: center;
 }
