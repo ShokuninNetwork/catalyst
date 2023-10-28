@@ -53,12 +53,24 @@
 
     <script type="module" src="../script.js"></script>
     <script>
+        
+        //Im doing this for proof of concept.
+        //The idea bein that when a link is generated it will be sent here and added to the list.
+        //And later when a user tries to post, an object will be sent to compare with the whitelist and a response sent back.
+        const whitelist = [];
+
         window.addEventListener("message", function(event) {
             if (event.origin === 'http://localhost:8080') {
                 const consoleOutput = document.getElementById('consoleOutput');
                 const messageData = event.data;
-        
-                if (typeof messageData === 'object') {
+                const parsedMsg = JSON.parse(event.data);
+                
+                // Check if the received message is a custom event
+                if (parsedMsg.type === 'whitelist') {
+                    // Access the custom event object within the message
+
+                    consoleOutput.innerHTML += `<p>${updateTime()} ${Object.getOwnPropertyNames(parsedMsg.links)} => ${parsedMsg.links} </p>`;
+                } else if (typeof messageData === 'object') {
                     // If the message is an object, format it with line breaks
                     const formattedMessage = JSON.stringify(messageData, null, 2)
                         .replace(/\\n/g, '<br>')

@@ -249,6 +249,8 @@ button:hover {
     width: fit-content;
     height: fit-content;
     display: none;
+    position: absolute;
+    bottom: 100%;
 }
 #debugButton{
     width: 4vw;

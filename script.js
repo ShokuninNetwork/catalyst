@@ -21,7 +21,16 @@ function getPostID(element) {
   }
   return element ? element.id : null;
 }
+
+//Jerome's attempt at a sanitizer
+function basicParser(unparsed) {
+  const parser = new DOMParser();
+  const parsed = parser.parseFromString(unparsed, 'text/html');
+  console.log(parsed.getElementsByTagName("a"));
+}
+
 function postRenderer(postContentElement, postContent) {
+  basicParser(postContent);
   postContentElement.setHTML
     ? postContentElement.setHTML(postContent)
     : /<\/?[a-z][\s\S]*>/i.test(postContent)
@@ -144,6 +153,8 @@ postContainer.addEventListener('mouseup', event => {
     link.href = `#${linkID}`;
     link.innerText = selectedText;
     insertTextAtCursor(postEditor, link.outerHTML);
+    //send link info to iframe
+    document.getElementById("debugIframe").contentWindow.postMessage(JSON.stringify({type: "whitelist", links: link}), 'http://localhost:8080/debugger.html');
     // Save the link ID and start/end positions of the selected text
     const postDiv = document.getElementById(postID);
     const start = postDiv.innerText.indexOf(selectedText);
