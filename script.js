@@ -154,7 +154,8 @@ postContainer.addEventListener('mouseup', event => {
     link.innerText = selectedText;
     insertTextAtCursor(postEditor, link.outerHTML);
     //send link info to iframe
-    document.getElementById("debugIframe").contentWindow.postMessage(JSON.stringify({type: "whitelist", links: link}), 'http://localhost:8080/debugger.html');
+    console.log(`beans ${link}`);
+    document.getElementById("debugIframe").contentWindow.postMessage(JSON.stringify({type: "whitelist", links: link.outerHTML}), 'http://localhost:8080/debugger.html');
     // Save the link ID and start/end positions of the selected text
     const postDiv = document.getElementById(postID);
     const start = postDiv.innerText.indexOf(selectedText);
