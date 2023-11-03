@@ -65,11 +65,15 @@
                 const messageData = event.data;
 
                 try {
-                    const parsedMsg = JSON.parse(event.data);
-                    if (parsedMsg.type === 'whitelist') {
+                    const objMsg = JSON.parse(event.data);
+                    if (objMsg.type === 'whitelist') {
                         // Access the custom event object within the message
-    
-                        consoleOutput.innerHTML += `<p>${updateTime()} ${JSON.stringify(parsedMsg.links)} => ${parsedMsg.links} => ${messageData}</p>`;
+                        
+                        const HTMLparser = new DOMParser();
+                        const doc = HTMLparser.parseFromString(objMsg.links, "text/html")
+                        const aTag = doc.querySelector('a');
+                        const attribute = aTag.getAttribute('href');
+                        consoleOutput.innerHTML += `<p>${updateTime()} ${attribute} </p>`;
                     }
                 }catch (e) {
                     if (typeof messageData === 'object') {
