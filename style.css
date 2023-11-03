@@ -104,20 +104,22 @@ footer {
 
     .left-side {
         position: absolute;
-        top: 18%;
+        top: 17vh;
         width: 13vw;
-        height: 100vh;
-        background-color: rgba(23, 11, 40, 0.5);
+        height: 81vh;
+        background-color: #c75fd3c9;
         display: flex;
         flex-direction: column;
         justify-content: center;
         align-items: center;
+        border-radius: 4%/2%;
     }
 
     #inkwell {
         /* Your existing styles */
         transition: max-height 0.2s ease-out;
         overflow: hidden;
+        width: 95%;
         max-height: 500px; /* Adjust to the actual height */
         z-index: 5;
         display: flex;
