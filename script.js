@@ -22,40 +22,55 @@ function getPostID(element) {
   return element ? element.id : null;
 }
 
-//Jerome's attempt at a sanitizer
-function basicParser(unparsed) {
-  const parser = new DOMParser();
-  const parsed = parser.parseFromString(unparsed, 'text/html');
-  console.log(parsed.getElementsByTagName("a"));
-}
-
 function postRenderer(postContentElement, postContent) {
-  basicParser(postContent);
-  postContentElement.setHTML
+  postContentElement.insertAdjacentHTML("afterbegin", postContent)
+  /*postContentElement.setHTML
     ? postContentElement.setHTML(postContent)
     : /<\/?[a-z][\s\S]*>/i.test(postContent)
       ? ((postContentElement.innerHTML = "<b><a href='https://developer.mozilla.org/en-US/docs/Web/API/HTML_Sanitizer_API#browser_compatibility' target='_blank'>unsupported browser</a>, rendering in text mode: </b><br/>"), postContentElement.appendChild(document.createTextNode(postContent)))
-      : (postContentElement.innerHTML = postContent);
+      : (postContentElement.innerHTML = postContent);*/
 }
 function postConstructor(postObject) {
-  const post = document.createElement('div');
-  const title = document.createElement('div');
-  const author = document.createElement('div');
-  const content = document.createElement('div');
-  post.classList.add('post');
-  title.classList.add('post-title');
-  author.classList.add('post-author');
-  content.classList.add('post-content');
-  postRenderer(title, postObject.title);
-  postRenderer(author, postObject.author);
-  postRenderer(content, postObject.content);
-  post.appendChild(title);
-  post.appendChild(author);
-  post.appendChild(content);
+  const post = document.createElement('iframe');
+  post.src = "about:blank";
+
+  post.onload = function() {
+    const cntWindow = post.contentWindow;
+    const cntDocument = cntWindow.document;
+
+    // Create a link element for the stylesheet
+    const stylesheetLink = cntDocument.createElement('link');
+    stylesheetLink.rel = 'stylesheet';
+    stylesheetLink.type = 'text/css';
+    stylesheetLink.href = 'style.css'; // Replace with the actual path to your stylesheet
+
+    // Append the link element to the head of the iframe's document
+    cntDocument.head.appendChild(stylesheetLink);
+
+    const title = cntWindow.document.createElement('div');
+    const author = cntWindow.document.createElement('div');
+    const content = cntWindow.document.createElement('div');
+
+    post.classList.add('post');
+    title.classList.add('post-title');
+    author.classList.add('post-author');
+    content.classList.add('post-content');
+
+    postRenderer(title, postObject.title);
+    postRenderer(author, postObject.author);
+    postRenderer(content, postObject.content);
+
+    cntWindow.document.body.appendChild(title);
+    cntWindow.document.body.appendChild(author);
+    cntWindow.document.body.appendChild(content);
+  };
+
   post.id = postObject.postID;
-  post.signature = postObject.signature
+  post.signature = postObject.signature;
+
   return post;
 }
+
 async function appendPost(postID) {
   const response = await postResponse(postID);
   if (!response.ok) {
