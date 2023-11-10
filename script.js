@@ -65,6 +65,7 @@ async function appendPost(postID) {
   const postObject = await response.json();
   postObject.postID = postID;
   const post = postConstructor(postObject);
+  console.log(post);
   const postsStartMarker = document.getElementById('posts-start-marker');
   postContainer.insertBefore(post, postsStartMarker.nextSibling);
 
@@ -122,7 +123,6 @@ async function loadPosts() {
   // Set the query parameters based on the user preferences
   const queryParams = `?max_posts=${userPrefs.maxPosts}&recency_days=${userPrefs.recencyDays}`;
   // Fetch the list of posts from the backend API
-  logDebug(queryParams);
   const response = await postResponse(queryParams);
   const posts = response.data;
   // Get an array of post IDs
@@ -230,7 +230,7 @@ saveButton.addEventListener('click', async () => {
   // Get the post ID from the response and log it to the console
   const postObj = await postMethod(newPost);
 
-  logDebug(`New post created with ID: ${postObj.postID}`);
+  //logDebug(`New post created with ID: ${postObj.postID}`);
   if (postEditor.temp) if (postEditor.temp.pendingAnchors) postEditor.temp.pendingAnchors.forEach(pendingAnchor => {
 
     let postRendered = document.createElement("div");
@@ -272,7 +272,6 @@ async function signPost() {
   const postAuthor = document.querySelector('.post-editor #editor-author');
   // Check if there is an existing keypair in localStorage
   const localStorageKeypair = localStorage.getItem("keySeed");
-  logDebug(localStorageKeypair);
   let keypair = localStorageKeypair ?
     (() => {
       let keySeed = new Uint8Array(atob(localStorageKeypair).split("").map(c => c.charCodeAt(0)));
@@ -299,12 +298,10 @@ async function signPost() {
       ...keypair.public_key_bytes()
     )
   );
-  logDebug(keypair.public_key_bytes());
   // Sign the post content using the keypair
   const signature = keypair.sign(
     postEditor.value
   );
-  logDebug(signature);
   // Store the signature in a variable waiting for post submission
   if (!postEditor.temp) { postEditor.temp = {} }
   postEditor.temp.signature = btoa(
@@ -360,7 +357,6 @@ document.getElementById('eventTest').addEventListener('click', function() {
   logDebug("Hello world");
 });
 
-
 async function postMethod(post){
   const R = await fetch('/post', {
     method: 'POST',
@@ -405,3 +401,6 @@ async function anchorMethod(anchor) {
 
   return responsePromise;
 };
+
+//iframe constructor, works as stub function, put setHTML as inner html to contruct a post.
+//check for local storage restrictions, permission security features.
