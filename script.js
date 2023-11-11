@@ -48,7 +48,7 @@ function postConstructor(postObject) {
 
   // Create iframe
   const post = document.createElement('iframe');
-  post.classList.add('post');
+  post.classList.add('postframe');
   post.src = "about:blank";
 
     post.onload = function() {
