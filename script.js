@@ -31,72 +31,85 @@ function postRenderer(postContentElement, postContent) {
       : (postContentElement.innerHTML = postContent);*/
 }
 function postConstructor(postObject) {
+  // Create container element for title and author (in main DOM)
+  const container = document.createElement('div');
+  const title = document.createElement('div');
+  const author = document.createElement('div');
+
+  container.classList.add('post');
+  title.classList.add('post-title');
+  author.classList.add('post-author');
+
+  postRenderer(title, postObject.title);
+  postRenderer(author, postObject.author);
+
+  container.appendChild(title);
+  container.appendChild(author);
+
+  // Create iframe
   const post = document.createElement('iframe');
+  post.classList.add('post');
   post.src = "about:blank";
 
-  post.onload = function() {
-    const cntWindow = post.contentWindow;
-    const cntDocument = cntWindow.document;
+    post.onload = function() {
+      const cntWindow = post.contentWindow;
+      const cntDocument = cntWindow.document;
 
-    // Create a link element for the stylesheet
-    const stylesheetLink = cntDocument.createElement('link');
-    stylesheetLink.rel = 'stylesheet';
-    stylesheetLink.type = 'text/css';
-    stylesheetLink.href = 'style.css'; // Replace with the actual path to your stylesheet
+      // Create a link element for the stylesheet
+      const stylesheetLink = cntDocument.createElement('link');
+      stylesheetLink.rel = 'stylesheet';
+      stylesheetLink.type = 'text/css';
+      stylesheetLink.href = 'style.css'; // Replace with the actual path to your stylesheet
 
-    cntDocument.head.appendChild(stylesheetLink);
+        stylesheetLink.onload = function() {
+          // Create content element within the iframe
+          const content = cntDocument.createElement('div');
+          content.classList.add('post-content');
+          postRenderer(content, postObject.content);
 
-    const title = cntWindow.document.createElement('div');
-    const author = cntWindow.document.createElement('div');
-    const content = cntWindow.document.createElement('div');
+          // Append content to the iframe's body
+          cntDocument.body.appendChild(content);
 
-    post.classList.add('post');
-    title.classList.add('post-title');
-    author.classList.add('post-author');
-    content.classList.add('post-content');
+          // Create a script element for the sendHeightToParent function
+          const scriptElement = cntDocument.createElement('script');
+          scriptElement.textContent = `
+            function sendHeightToParent() {
+              // Get the height of the content
+              const height = document.body.scrollHeight;
 
-    postRenderer(title, postObject.title);
-    postRenderer(author, postObject.author);
-    postRenderer(content, postObject.content);
+              // Send a message to the parent with the height
+              parent.postMessage({ height }, '*');
+            }
 
-    cntWindow.document.body.appendChild(title);
-    cntWindow.document.body.appendChild(author);
-    cntWindow.document.body.appendChild(content);
+            // Call the function when the iframe is loaded
+            sendHeightToParent();
+          `;
 
-    // Create a script element for the sendHeightToParent function
-    const scriptElement = cntDocument.createElement('script');
-    scriptElement.textContent = `
-      function sendHeightToParent() {
-        // Get the height of the content
-        const height = document.body.scrollHeight;
+          // Append the script element to the body of the iframe's document
+          cntDocument.body.appendChild(scriptElement);
+        };
 
-        // Send a message to the parent with the height
-        parent.postMessage({ height }, '*');
-      }
-
-      // Call the function when the iframe is loaded
-      sendHeightToParent();
-    `;
-
-    // Append the script element to the body of the iframe's document
-    cntDocument.body.appendChild(scriptElement);
-  };
+      // Append the link element to the head of the iframe's document
+      cntDocument.head.appendChild(stylesheetLink);
+    };
 
   post.id = postObject.postID;
   post.signature = postObject.signature;
 
-  window.addEventListener('message', function(event) {
-    // Ensure that the message is from a trusted source (optional)
-    // if (event.origin !== 'http://your-iframe-domain.com') return;
-  
-    // Adjust the height of the iframe
-    const iframe = document.getElementById(post.id);
-    console.log(iframe);
-    iframe.style.height = event.data.height + 'px';
-  });
+    window.addEventListener('message', function(event) {
+      // Ensure that the message is from a trusted source (optional)
+      // if (event.origin !== 'http://your-iframe-domain.com') return;
+    
+      // Adjust the height of the iframe
+      const iframe = document.getElementById(post.id);
+      iframe.style.height = event.data.height + 'px';
+    });
 
-  return post;
+  container.appendChild(post); // Append the iframe to the container
+
+  return container;
 }
+
 
 async function appendPost(postID) {
   const response = await postResponse(postID);
