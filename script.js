@@ -44,7 +44,6 @@ function postConstructor(postObject) {
     stylesheetLink.type = 'text/css';
     stylesheetLink.href = 'style.css'; // Replace with the actual path to your stylesheet
 
-    // Append the link element to the head of the iframe's document
     cntDocument.head.appendChild(stylesheetLink);
 
     const title = cntWindow.document.createElement('div');
@@ -63,10 +62,38 @@ function postConstructor(postObject) {
     cntWindow.document.body.appendChild(title);
     cntWindow.document.body.appendChild(author);
     cntWindow.document.body.appendChild(content);
+
+    // Create a script element for the sendHeightToParent function
+    const scriptElement = cntDocument.createElement('script');
+    scriptElement.textContent = `
+      function sendHeightToParent() {
+        // Get the height of the content
+        const height = document.body.scrollHeight;
+
+        // Send a message to the parent with the height
+        parent.postMessage({ height }, '*');
+      }
+
+      // Call the function when the iframe is loaded
+      sendHeightToParent();
+    `;
+
+    // Append the script element to the body of the iframe's document
+    cntDocument.body.appendChild(scriptElement);
   };
 
   post.id = postObject.postID;
   post.signature = postObject.signature;
+
+  window.addEventListener('message', function(event) {
+    // Ensure that the message is from a trusted source (optional)
+    // if (event.origin !== 'http://your-iframe-domain.com') return;
+  
+    // Adjust the height of the iframe
+    const iframe = document.getElementById(post.id);
+    console.log(iframe);
+    iframe.style.height = event.data.height + 'px';
+  });
 
   return post;
 }
