@@ -64,6 +64,21 @@ footer {
     z-index: 4;
     flex: none;
 }
+/* Define a style for iframes in posts*/
+.postframe{
+    font-size: 1.5em;
+    background-color: #ffffff;
+    border: 1px solid #dddddd;
+    border-radius: 5px;
+    box-shadow: 0px 2px 4px rgba(23, 11, 40, 0.3);
+    padding: 10px;
+    width: 98%;
+    font-family: inherit;
+    z-index: 4;
+    display: flex;
+    flex: none;
+    margin: auto;
+}
 
 /* Define a style for the post title */
 .post-title {
