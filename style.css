@@ -24,6 +24,9 @@ body {
     font-family: inherit;
     z-index: 8;
 }
+.post-container > iframe{
+    max-height: calc(83vh - 1rem);
+}
 
 .post-container.small {
     left: 0;
@@ -59,6 +62,7 @@ footer {
     width: calc(100% - 10px);
     font-family: inherit;
     z-index: 4;
+    flex: none;
 }
 
 /* Define a style for the post title */
