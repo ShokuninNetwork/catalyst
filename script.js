@@ -22,40 +22,94 @@ function getPostID(element) {
   return element ? element.id : null;
 }
 
-//Jerome's attempt at a sanitizer
-function basicParser(unparsed) {
-  const parser = new DOMParser();
-  const parsed = parser.parseFromString(unparsed, 'text/html');
-  console.log(parsed.getElementsByTagName("a"));
-}
-
 function postRenderer(postContentElement, postContent) {
-  basicParser(postContent);
-  postContentElement.setHTML
+  postContentElement.insertAdjacentHTML("afterbegin", postContent)
+  /*postContentElement.setHTML
     ? postContentElement.setHTML(postContent)
     : /<\/?[a-z][\s\S]*>/i.test(postContent)
       ? ((postContentElement.innerHTML = "<b><a href='https://developer.mozilla.org/en-US/docs/Web/API/HTML_Sanitizer_API#browser_compatibility' target='_blank'>unsupported browser</a>, rendering in text mode: </b><br/>"), postContentElement.appendChild(document.createTextNode(postContent)))
-      : (postContentElement.innerHTML = postContent);
+      : (postContentElement.innerHTML = postContent);*/
 }
 function postConstructor(postObject) {
-  const post = document.createElement('div');
+  // Create container element for title and author (in main DOM)
+  const container = document.createElement('div');
   const title = document.createElement('div');
   const author = document.createElement('div');
-  const content = document.createElement('div');
-  post.classList.add('post');
+
+  container.classList.add('post');
   title.classList.add('post-title');
   author.classList.add('post-author');
-  content.classList.add('post-content');
+
   postRenderer(title, postObject.title);
   postRenderer(author, postObject.author);
-  postRenderer(content, postObject.content);
-  post.appendChild(title);
-  post.appendChild(author);
-  post.appendChild(content);
+
+  container.appendChild(title);
+  container.appendChild(author);
+
+  // Create iframe
+  const post = document.createElement('iframe');
+  post.classList.add('postframe');
+  post.src = "about:blank";
+
+    post.onload = function() {
+      const cntWindow = post.contentWindow;
+      const cntDocument = cntWindow.document;
+
+      // Create a link element for the stylesheet
+      const stylesheetLink = cntDocument.createElement('link');
+      stylesheetLink.rel = 'stylesheet';
+      stylesheetLink.type = 'text/css';
+      stylesheetLink.href = 'style.css';
+
+        stylesheetLink.onload = function() {
+          // Create content element within the iframe
+          const content = cntDocument.createElement('div');
+          content.classList.add('post-content');
+          postRenderer(content, postObject.content);
+
+          // Append content to the iframe's body
+          cntDocument.body.appendChild(content);
+
+          cntDocument.body.setAttribute('onload', 'sendHeightToParent()');
+          
+          // Create a script element to send height ideal size to parent to modify.
+          const scriptElement = cntDocument.createElement('script');
+          scriptElement.textContent = `
+            function sendHeightToParent() {
+              // Get the height of the content
+              const height = document.body.scrollHeight;
+
+              // Send a message to the parent with the height
+              parent.postMessage({ height }, '*');
+            }
+          `;
+
+          // Append the script element to the body of the iframe's document
+          cntDocument.body.appendChild(scriptElement);
+          
+        };
+
+      // Append the link element to the head of the iframe's document
+      cntDocument.head.appendChild(stylesheetLink);
+    };
+
   post.id = postObject.postID;
-  post.signature = postObject.signature
-  return post;
+  post.signature = postObject.signature;
+
+    window.addEventListener('message', function(event) {
+      // Ensure that the message is from a trusted source
+      // if (event.origin !== 'http://your-iframe-domain.com') return;
+      console.log("Beanz" + event.data.height);
+      // Adjust the height of the iframe
+      const iframe = document.getElementById(post.id);
+      iframe.style.height = event.data.height + 'px';
+    });
+
+  container.appendChild(post); // Append the iframe to the container
+
+  return container;
 }
+
 async function appendPost(postID) {
   const response = await postResponse(postID);
   if (!response.ok) {
@@ -65,6 +119,7 @@ async function appendPost(postID) {
   const postObject = await response.json();
   postObject.postID = postID;
   const post = postConstructor(postObject);
+  console.log(post);
   const postsStartMarker = document.getElementById('posts-start-marker');
   postContainer.insertBefore(post, postsStartMarker.nextSibling);
 
@@ -122,7 +177,6 @@ async function loadPosts() {
   // Set the query parameters based on the user preferences
   const queryParams = `?max_posts=${userPrefs.maxPosts}&recency_days=${userPrefs.recencyDays}`;
   // Fetch the list of posts from the backend API
-  logDebug(queryParams);
   const response = await postResponse(queryParams);
   const posts = response.data;
   // Get an array of post IDs
@@ -141,6 +195,7 @@ async function loadPosts() {
 // Call the function to load the posts into the post container
 loadPosts();
 // Add a button element to start creating a transformation
+
 postContainer.addEventListener('mouseup', event => {
   const postID = getPostID(event.target);
   const selection = window.getSelection();
@@ -154,7 +209,7 @@ postContainer.addEventListener('mouseup', event => {
     link.innerText = selectedText;
     insertTextAtCursor(postEditor, link.outerHTML);
     //send link info to iframe
-    document.getElementById("debugIframe").contentWindow.postMessage(JSON.stringify({type: "whitelist", links: link}), 'http://localhost:8080/debugger.html');
+    document.getElementById("debugIframe").contentWindow.postMessage(JSON.stringify({type: "whitelist", links: link.outerHTML}), 'http://localhost:8080/debugger.html');
     // Save the link ID and start/end positions of the selected text
     const postDiv = document.getElementById(postID);
     const start = postDiv.innerText.indexOf(selectedText);
@@ -177,6 +232,7 @@ postContainer.addEventListener('mouseup', event => {
     });
   }
 });
+
 document.getElementById('toggle-inkwell').addEventListener('click', function() {
   document.getElementById('inkwell').classList.toggle('collapsed');
 });
@@ -230,7 +286,7 @@ saveButton.addEventListener('click', async () => {
   // Get the post ID from the response and log it to the console
   const postObj = await postMethod(newPost);
 
-  logDebug(`New post created with ID: ${postObj.postID}`);
+  //logDebug(`New post created with ID: ${postObj.postID}`);
   if (postEditor.temp) if (postEditor.temp.pendingAnchors) postEditor.temp.pendingAnchors.forEach(pendingAnchor => {
 
     let postRendered = document.createElement("div");
@@ -272,7 +328,6 @@ async function signPost() {
   const postAuthor = document.querySelector('.post-editor #editor-author');
   // Check if there is an existing keypair in localStorage
   const localStorageKeypair = localStorage.getItem("keySeed");
-  logDebug(localStorageKeypair);
   let keypair = localStorageKeypair ?
     (() => {
       let keySeed = new Uint8Array(atob(localStorageKeypair).split("").map(c => c.charCodeAt(0)));
@@ -299,12 +354,10 @@ async function signPost() {
       ...keypair.public_key_bytes()
     )
   );
-  logDebug(keypair.public_key_bytes());
   // Sign the post content using the keypair
   const signature = keypair.sign(
     postEditor.value
   );
-  logDebug(signature);
   // Store the signature in a variable waiting for post submission
   if (!postEditor.temp) { postEditor.temp = {} }
   postEditor.temp.signature = btoa(
@@ -360,7 +413,6 @@ document.getElementById('eventTest').addEventListener('click', function() {
   logDebug("Hello world");
 });
 
-
 async function postMethod(post){
   const R = await fetch('/post', {
     method: 'POST',
@@ -405,3 +457,7 @@ async function anchorMethod(anchor) {
 
   return responsePromise;
 };
+
+//check for local storage restrictions, permission security features.
+//live post updater in post section
+//Small screen size issue

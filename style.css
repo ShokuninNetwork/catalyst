@@ -1,12 +1,6 @@
 @charset "UTF-8";
 
 body {
-    background-image: url('/icon.svg'), url('/icon_text.svg'), linear-gradient(to bottom right, white, rgba(23, 11, 40, 0.3));
-    background-position: top left, max(12%, 20em) 2%, top left;
-    background-size: max(9%, 10em), 40em, 130vw 130vh;
-    background-repeat: no-repeat, no-repeat, no-repeat;
-    overflow-x: hidden;
-    overflow-y: hidden;
     font-family: "URW Gothic", sans-serif;
 }
 
@@ -29,6 +23,9 @@ body {
     overflow-y: auto;
     font-family: inherit;
     z-index: 8;
+}
+.post-container > iframe{
+    max-height: calc(83vh - 1rem);
 }
 
 .post-container.small {
@@ -65,6 +62,22 @@ footer {
     width: calc(100% - 10px);
     font-family: inherit;
     z-index: 4;
+    flex: none;
+}
+/* Define a style for iframes in posts*/
+.postframe{
+    font-size: 1.5em;
+    background-color: #ffffff;
+    border: 1px solid #dddddd;
+    border-radius: 5px;
+    box-shadow: 0px 2px 4px rgba(23, 11, 40, 0.3);
+    padding: 10px;
+    width: 98%;
+    font-family: inherit;
+    z-index: 4;
+    display: flex;
+    flex: none;
+    margin: auto;
 }
 
 /* Define a style for the post title */
@@ -94,30 +107,32 @@ footer {
         top: 0;
         width: 50vw;
         height: 100vh;
-        background-color: rgba(23, 11, 40, 0.5);
+        background-color: #5f6bd3;
         display: flex;
         flex-direction: column;
         justify-content: center;
         align-items: center;
-        z-index: 7;
+        z-index: 9;
     }
 
     .left-side {
         position: absolute;
-        top: 18%;
+        top: 17vh;
         width: 13vw;
-        height: 100vh;
-        background-color: rgba(23, 11, 40, 0.5);
+        height: 81vh;
+        background-color: #5f6bd3c9;
         display: flex;
         flex-direction: column;
         justify-content: center;
         align-items: center;
+        border-radius: 4%/2%;
     }
 
     #inkwell {
         /* Your existing styles */
         transition: max-height 0.2s ease-out;
         overflow: hidden;
+        width: 95%;
         max-height: 500px; /* Adjust to the actual height */
         z-index: 5;
         display: flex;
@@ -167,12 +182,12 @@ footer {
         left: 0;
         width: 100%;
         height: 100%;
-        background-color: rgba(23, 11, 40, 0.5);
+        background-color: #5f6bd3;
         display: flex;
         flex-direction: column;
         justify-content: center;
         align-items: center;
-        z-index: 7;
+        z-index: 9;
     }
 
     .left-side {
