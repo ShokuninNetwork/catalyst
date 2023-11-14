@@ -59,7 +59,7 @@ function postConstructor(postObject) {
       const stylesheetLink = cntDocument.createElement('link');
       stylesheetLink.rel = 'stylesheet';
       stylesheetLink.type = 'text/css';
-      stylesheetLink.href = 'style.css'; // Replace with the actual path to your stylesheet
+      stylesheetLink.href = 'style.css';
 
         stylesheetLink.onload = function() {
           // Create content element within the iframe
@@ -70,7 +70,9 @@ function postConstructor(postObject) {
           // Append content to the iframe's body
           cntDocument.body.appendChild(content);
 
-          // Create a script element for the sendHeightToParent function
+          cntDocument.body.setAttribute('onload', 'sendHeightToParent()');
+          
+          // Create a script element to send height ideal size to parent to modify.
           const scriptElement = cntDocument.createElement('script');
           scriptElement.textContent = `
             function sendHeightToParent() {
@@ -80,13 +82,11 @@ function postConstructor(postObject) {
               // Send a message to the parent with the height
               parent.postMessage({ height }, '*');
             }
-
-            // Call the function when the iframe is loaded
-            sendHeightToParent();
           `;
 
           // Append the script element to the body of the iframe's document
           cntDocument.body.appendChild(scriptElement);
+          
         };
 
       // Append the link element to the head of the iframe's document
@@ -97,9 +97,9 @@ function postConstructor(postObject) {
   post.signature = postObject.signature;
 
     window.addEventListener('message', function(event) {
-      // Ensure that the message is from a trusted source (optional)
+      // Ensure that the message is from a trusted source
       // if (event.origin !== 'http://your-iframe-domain.com') return;
-    
+      console.log("Beanz" + event.data.height);
       // Adjust the height of the iframe
       const iframe = document.getElementById(post.id);
       iframe.style.height = event.data.height + 'px';
@@ -109,7 +109,6 @@ function postConstructor(postObject) {
 
   return container;
 }
-
 
 async function appendPost(postID) {
   const response = await postResponse(postID);
@@ -196,6 +195,7 @@ async function loadPosts() {
 // Call the function to load the posts into the post container
 loadPosts();
 // Add a button element to start creating a transformation
+
 postContainer.addEventListener('mouseup', event => {
   const postID = getPostID(event.target);
   const selection = window.getSelection();
@@ -232,6 +232,7 @@ postContainer.addEventListener('mouseup', event => {
     });
   }
 });
+
 document.getElementById('toggle-inkwell').addEventListener('click', function() {
   document.getElementById('inkwell').classList.toggle('collapsed');
 });
@@ -457,5 +458,6 @@ async function anchorMethod(anchor) {
   return responsePromise;
 };
 
-//iframe constructor, works as stub function, put setHTML as inner html to contruct a post.
 //check for local storage restrictions, permission security features.
+//live post updater in post section
+//Small screen size issue
