@@ -6,6 +6,7 @@ body {
 
 /* Define a style for the post container */
 .post-container {
+    /*Math for Post Editor*/
     position: absolute;
     left: 51vw;
     top: 13vh;
@@ -16,13 +17,20 @@ body {
     gap: 10px;
     padding: 10px;
     transition: width 0.3s ease-in-out;
+    /*Flex items*/
+    display: flex;
     align-items: center;
     flex-direction: column;
     justify-content: flex-start;
+    /*More Stylings*/
     overflow-x: hidden;
     overflow-y: auto;
     font-family: inherit;
     z-index: 8;
+    /*Should make jumping to hyperlinks smooth*/
+    scroll-behavior: smooth;
+
+    scrollbar-color: #8d5fd3 #ffffff00;
 }
 .post-container > iframe{
     max-height: calc(83vh - 1rem);
