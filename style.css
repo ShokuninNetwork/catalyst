@@ -13,7 +13,6 @@ body {
     transform: translateX(calc(-50% + 6vw));
     width: 80vw;
     height: calc(83vh - 1rem);
-    display: flex;
     gap: 10px;
     padding: 10px;
     transition: width 0.3s ease-in-out;
@@ -146,6 +145,11 @@ footer {
         display: flex;
         justify-content: center;
     }
+    #inkwell > iframe {
+        width: 90%; 
+        height: 30vh; 
+        border: none;
+    }
     
     #inkwell.collapsed {
         max-height: 0;
@@ -182,6 +186,7 @@ footer {
 @media (max-width: 1079px) {
     .post-container {
         transform: translateX(-50%);
+        height: calc(72vh - 1rem);
     }
 
     .right-side {
@@ -200,17 +205,25 @@ footer {
 
     .left-side {
         position: absolute;
-        background-color: Canvas;
+        background-color: #5f6bd3c9;
         bottom: 0;
+        margin-left: auto;
+        margin-right: auto;
+        left: 0;
         right: 0;
-        width: 100%;
+        width: 81vw;
+        height: 10vh;
         display: flex;
         flex-direction: column;
         justify-content: center;
         align-items: center;
         z-index: 1;
+        border-radius: 4%/2%;
     }
-
+    #inkwell{
+        height: 75%;
+        width: 75%;
+    }
     #inkwell.collapsed {
         position: fixed;
         bottom: 0;
@@ -218,11 +231,14 @@ footer {
         max-height: 50px; /* Adjust to the height of your icon */
         width: 50px; /* Adjust to the width of your icon */
     }
+    #inkwell > iframe {
+        width: 90%; 
+        height: 30vh; 
+        border: none;
+    }
 
     #toggle-inkwell {
-        position: fixed;
-        bottom: 0;
-        right: 0;
+        font-size: 1em;
     }
 
     .hidden {
@@ -248,6 +264,10 @@ footer {
         cursor: pointer;
         z-index: 7;
         transition: background-color 0.2s ease-in-out;
+    }
+
+    footer{
+        visibility: hidden;
     }
 }
 
