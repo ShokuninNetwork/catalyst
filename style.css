@@ -73,7 +73,7 @@ footer {
 }
 /* Define a style for iframes in posts*/
 .postframe{
-    font-size: 1.5em;
+    font-size: 1em;
     background-color: #ffffff;
     border: 1px solid #dddddd;
     border-radius: 5px;
@@ -106,6 +106,8 @@ footer {
 .post-content {
     line-height: 2.5;
     color: #170b28;
+    font-family: "URW Gothic", sans-serif;
+    font-size: 1em;
 }
 
 @media (min-width: 1080px) {
@@ -269,6 +271,10 @@ footer {
     footer{
         visibility: hidden;
     }
+}
+
+#stub-post{
+    display: none;
 }
 
 /* Define a style for the post editor textarea */
