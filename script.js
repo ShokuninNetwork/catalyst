@@ -233,11 +233,16 @@ postContainer.addEventListener('mouseup', event => {
   }
 });
 
+//inkwell toggle button.
 document.getElementById('toggle-inkwell').addEventListener('click', function() {
   document.getElementById('inkwell').classList.toggle('collapsed');
 });
+
+//Post editor logic. Live post preview pops up when button is pressed.
 document.addEventListener('click', (ev) => {
   const isToggleBtn = ev.target.classList.contains('toggle-button');
+  const isStubPost = document.getElementById("stub-post");
+
   const isPreviewBtn = ev.target.classList.contains('preview-button');
 
   if (isToggleBtn || isPreviewBtn) {
@@ -247,6 +252,8 @@ document.addEventListener('click', (ev) => {
     if (isHidden) {
       container.classList.remove('hidden');
       container.classList.add('shown');
+
+      isStubPost.style.display = "block";
       if (isWideWindow.matches) {
         postContainer.classList.add('small');
       }
@@ -257,11 +264,34 @@ document.addEventListener('click', (ev) => {
     } else {
       container.classList.add('hidden');
       container.classList.remove('shown');
+
+      isStubPost.style.display = "none";
       if (!isPreviewBtn) {
         postContainer.classList.remove('small');
       }
     }
   }
+});
+
+//Live preview logic
+const title = document.getElementById("editor-title");
+const author = document.getElementById("editor-author");
+const postContent = document.getElementById("editor-content");
+
+// Event listeners for whenever the content of the textareas changes
+title.addEventListener("input", function() {
+  document.getElementById("stub-title").innerHTML = title.value;
+
+});
+
+author.addEventListener("input", function() {
+  document.getElementById("stub-author").innerHTML = author.value;
+
+});
+
+postContent.addEventListener("input", function() {
+  document.getElementById("stub-iframe").innerHTML = postContent.value;
+
 });
 
 // Get a reference to the save button
@@ -286,7 +316,6 @@ saveButton.addEventListener('click', async () => {
   // Get the post ID from the response and log it to the console
   const postObj = await postMethod(newPost);
 
-  //logDebug(`New post created with ID: ${postObj.postID}`);
   if (postEditor.temp) if (postEditor.temp.pendingAnchors) postEditor.temp.pendingAnchors.forEach(pendingAnchor => {
 
     let postRendered = document.createElement("div");
@@ -460,4 +489,5 @@ async function anchorMethod(anchor) {
 
 //check for local storage restrictions, permission security features.
 //live post updater in post section
-//Small screen size issue
+//-> Could we not just replace the post editor to be a post in itself and you just edit it?
+//-> If! We can have a manually added post which will live update in the post area (hidden when post editor is hidden)
