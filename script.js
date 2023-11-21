@@ -339,6 +339,11 @@ saveButton.addEventListener('click', async () => {
 
   clearPost();
   appendPost(postObj.postID);
+
+  //Post preview reset to default
+  document.getElementById("stub-title").innerHTML = "Title";
+  document.getElementById("stub-author").innerHTML = "Author";
+  document.getElementById("stub-iframe").innerHTML = "This is what your post will look like";
 });
 function clearPost() {
   const postTitle = document.querySelector('.post-editor #editor-title');
@@ -350,6 +355,11 @@ function clearPost() {
   delete postEditor.temp;
   postEditor.readOnly = false;
   postAuthor.readOnly = false;
+
+  //Post preview reset to default
+  document.getElementById("stub-title").innerHTML = "Title";
+  document.getElementById("stub-author").innerHTML = "Author";
+  document.getElementById("stub-iframe").innerHTML = "This is what your post will look like";
 }
 // Click handler function for the sign button
 async function signPost() {
