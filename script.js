@@ -22,8 +22,13 @@ function getPostID(element) {
   return element ? element.id : null;
 }
 
-function postRenderer(postContentElement, postContent) {
-  postContentElement.insertAdjacentHTML("afterbegin", postContent)
+function postRenderer(postContentElement, postContent, flag="0") {
+  if(flag === "0"){
+    postContentElement.insertAdjacentText("afterbegin", postContent)
+  }else{
+    postContentElement.insertAdjacentHTML("afterbegin", postContent)
+  }
+
   /*postContentElement.setHTML
     ? postContentElement.setHTML(postContent)
     : /<\/?[a-z][\s\S]*>/i.test(postContent)
@@ -65,7 +70,7 @@ function postConstructor(postObject) {
           // Create content element within the iframe
           const content = cntDocument.createElement('div');
           content.classList.add('post-content');
-          postRenderer(content, postObject.content);
+          postRenderer(content, postObject.content, "1");
 
           // Append content to the iframe's body
           cntDocument.body.appendChild(content);
@@ -280,17 +285,17 @@ const postContent = document.getElementById("editor-content");
 
 // Event listeners for whenever the content of the textareas changes
 title.addEventListener("input", function() {
-  document.getElementById("stub-title").innerHTML = title.value;
+  document.getElementById("stub-title").innerText = title.value;
 
 });
 
 author.addEventListener("input", function() {
-  document.getElementById("stub-author").innerHTML = author.value;
+  document.getElementById("stub-author").innerText = author.value;
 
 });
 
 postContent.addEventListener("input", function() {
-  document.getElementById("stub-iframe").innerHTML = postContent.value;
+  document.getElementById("stub-iframe").innerText = postContent.value;
 
 });
 
@@ -341,9 +346,9 @@ saveButton.addEventListener('click', async () => {
   appendPost(postObj.postID);
 
   //Post preview reset to default
-  document.getElementById("stub-title").innerHTML = "Title";
-  document.getElementById("stub-author").innerHTML = "Author";
-  document.getElementById("stub-iframe").innerHTML = "This is what your post will look like";
+  document.getElementById("stub-title").innerText = "Title";
+  document.getElementById("stub-author").innerText = "Author";
+  document.getElementById("stub-iframe").innerText = "This is what your post will look like";
 });
 function clearPost() {
   const postTitle = document.querySelector('.post-editor #editor-title');
@@ -357,9 +362,9 @@ function clearPost() {
   postAuthor.readOnly = false;
 
   //Post preview reset to default
-  document.getElementById("stub-title").innerHTML = "Title";
-  document.getElementById("stub-author").innerHTML = "Author";
-  document.getElementById("stub-iframe").innerHTML = "This is what your post will look like";
+  document.getElementById("stub-title").innerText = "Title";
+  document.getElementById("stub-author").innerText = "Author";
+  document.getElementById("stub-iframe").innerText = "This is what your post will look like";
 }
 // Click handler function for the sign button
 async function signPost() {
@@ -498,6 +503,9 @@ async function anchorMethod(anchor) {
 };
 
 //check for local storage restrictions, permission security features.
-//live post updater in post section
+//remove old preview.
+//allow UI to support hiding messages.
+//-> Only show messages inted for you.
+//Identity/fact attestation and local user beliefs. Basically an updoot for authors for 
 //-> Could we not just replace the post editor to be a post in itself and you just edit it?
 //-> If! We can have a manually added post which will live update in the post area (hidden when post editor is hidden)
