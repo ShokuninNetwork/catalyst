@@ -56,59 +56,60 @@ function postConstructor(postObject) {
   post.classList.add('postframe');
   post.src = "about:blank";
 
-    post.onload = function() {
-      const cntWindow = post.contentWindow;
-      const cntDocument = cntWindow.document;
+  post.onload = function() {
+    const cntWindow = post.contentWindow;
+    const cntDocument = cntWindow.document;
 
-      // Create a link element for the stylesheet
-      const stylesheetLink = cntDocument.createElement('link');
-      stylesheetLink.rel = 'stylesheet';
-      stylesheetLink.type = 'text/css';
-      stylesheetLink.href = 'style.css';
+    // Create a link element for the stylesheet
+    const stylesheetLink = cntDocument.createElement('link');
+    stylesheetLink.rel = 'stylesheet';
+    stylesheetLink.type = 'text/css';
+    stylesheetLink.href = 'style.css';
 
-        stylesheetLink.onload = function() {
-          // Create content element within the iframe
-          const content = cntDocument.createElement('div');
-          content.classList.add('post-content');
-          postRenderer(content, postObject.content, "1");
+      stylesheetLink.onload = function() {
+        // Create content element within the iframe
+        const content = cntDocument.createElement('div');
+        content.classList.add('post-content');
+        postRenderer(content, postObject.content, "1");
 
-          // Append content to the iframe's body
-          cntDocument.body.appendChild(content);
+        // Append content to the iframe's body
+        cntDocument.body.appendChild(content);
 
-          cntDocument.body.setAttribute('onload', 'sendHeightToParent()');
-          
-          // Create a script element to send height ideal size to parent to modify.
-          const scriptElement = cntDocument.createElement('script');
-          scriptElement.textContent = `
-            function sendHeightToParent() {
-              // Get the height of the content
-              const height = document.body.scrollHeight;
+        cntDocument.body.setAttribute('onload', 'sendHeightToParent()');
+        
+        // Create a script element to send height ideal size to parent to modify.
+        const scriptElement = cntDocument.createElement('script');
+        scriptElement.textContent = `
+          function sendHeightToParent() {
+            // Get the height of the content
+            const height = document.body.scrollHeight;
 
-              // Send a message to the parent with the height
-              parent.postMessage({ height }, '*');
-            }
-          `;
+            // Send a message to the parent with the height
+            parent.postMessage({ height }, '*');
+          }
+        `;
 
-          // Append the script element to the body of the iframe's document
-          cntDocument.body.appendChild(scriptElement);
-          
-        };
+        // Append the script element to the body of the iframe's document
+        cntDocument.body.appendChild(scriptElement);
+        
+      };
 
-      // Append the link element to the head of the iframe's document
-      cntDocument.head.appendChild(stylesheetLink);
-    };
+    // Append the link element to the head of the iframe's document
+    cntDocument.head.appendChild(stylesheetLink);
+    post.sandbox = "allow-scripts";
+  };
 
   post.id = postObject.postID;
   post.signature = postObject.signature;
 
-    window.addEventListener('message', function(event) {
-      // Ensure that the message is from a trusted source
-      // if (event.origin !== 'http://your-iframe-domain.com') return;
-      console.log("Beanz" + event.data.height);
-      // Adjust the height of the iframe
-      const iframe = document.getElementById(post.id);
-      iframe.style.height = event.data.height + 'px';
-    });
+  window.addEventListener('message', function(event) {
+    // Ensure that the message is from a trusted source
+    // if (event.origin !== 'http://your-iframe-domain.com') return;
+    console.log("Beanz" + event.data.height);
+    // Adjust the height of the iframe
+    const iframe = document.getElementById(post.id);
+    iframe.style.height = event.data.height + 'px';
+  });
 
   container.appendChild(post); // Append the iframe to the container
 
@@ -135,6 +136,7 @@ async function appendPost(postID) {
     postContainer.removeChild(postContainer.lastChild);
   }
 }
+
 async function getUnfilteredAnchors(postId) {
   const response = await postResponse(postId, "/unfiltered_anchors");
   if (!response.ok) {
@@ -162,6 +164,7 @@ async function getFilteredAnchors(postId) {
     referencingPostId: anchor.referencing_post_id,
   }));
 }
+
 function insertTextAtCursor(textarea, text) {
   // Get the current cursor position
   const startPos = textarea.selectionStart;
@@ -177,6 +180,7 @@ function insertTextAtCursor(textarea, text) {
   // Set the focus back to the textarea
   textarea.focus();
 }
+
 // Define a function to load posts from the backend API
 async function loadPosts() {
   // Set the query parameters based on the user preferences
@@ -197,6 +201,7 @@ async function loadPosts() {
     postContainer.appendChild(postDiv);
   });
 };
+
 // Call the function to load the posts into the post container
 loadPosts();
 // Add a button element to start creating a transformation
@@ -347,6 +352,7 @@ saveButton.addEventListener('click', async () => {
   document.getElementById("stub-author").innerText = "Author";
   document.getElementById("stub-iframe").innerText = "This is what your post will look like";
 });
+
 function clearPost() {
   const postTitle = document.querySelector('.post-editor #editor-title');
   const postAuthor = document.querySelector('.post-editor #editor-author');
@@ -501,7 +507,6 @@ async function anchorMethod(anchor) {
 
 //check for local storage restrictions, permission security features.
 //allow UI to support hiding messages.
+//signalling messages hidden
 //-> Only show messages inted for you.
 //Identity/fact attestation and local user beliefs. Basically an updoot for authors for 
-//-> Could we not just replace the post editor to be a post in itself and you just edit it?
-//-> If! We can have a manually added post which will live update in the post area (hidden when post editor is hidden)
