@@ -248,9 +248,7 @@ document.addEventListener('click', (ev) => {
   const isToggleBtn = ev.target.classList.contains('toggle-button');
   const isStubPost = document.getElementById("stub-post");
 
-  const isPreviewBtn = ev.target.classList.contains('preview-button');
-
-  if (isToggleBtn || isPreviewBtn) {
+  if (isToggleBtn) {
     const container = isToggleBtn ? editorContainer : previewContainer;
     const isHidden = container.classList.contains('hidden');
 
@@ -271,9 +269,8 @@ document.addEventListener('click', (ev) => {
       container.classList.remove('shown');
 
       isStubPost.style.display = "none";
-      if (!isPreviewBtn) {
-        postContainer.classList.remove('small');
-      }
+
+      postContainer.classList.remove('small');
     }
   }
 });
@@ -503,7 +500,6 @@ async function anchorMethod(anchor) {
 };
 
 //check for local storage restrictions, permission security features.
-//remove old preview.
 //allow UI to support hiding messages.
 //-> Only show messages inted for you.
 //Identity/fact attestation and local user beliefs. Basically an updoot for authors for 
