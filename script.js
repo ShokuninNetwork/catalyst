@@ -5,7 +5,7 @@ const editorContainer = document.querySelector('.post-editor');
 const postEditor = document.querySelector('.post-editor #editor-content');
 const previewContainer = document.querySelector('.post-previewer');
 const previewPost = document.querySelector('.preview-post');
-const postContainer = document.querySelector('.post-container');
+const postContainer = document.querySelector('#post-container');
 const isWideWindow = window.matchMedia('(min-width: 1080px)');
 // Get the user preferences from localStorage or set defaults
 const storedPreferences = localStorage.getItem('userPreferences');
@@ -50,6 +50,11 @@ function postConstructor(postObject) {
 
   container.appendChild(title);
   container.appendChild(author);
+
+  //Hide button
+  const hide = document.createElement('button');
+  hide.classList.add('hide-post');
+  container.appendChild(hide);
 
   // Create iframe
   const post = document.createElement('iframe');
@@ -437,6 +442,17 @@ document.getElementById("inkwell").addEventListener('signalingMessage', async (e
   logDebug('Received signaling event:', event.detail);
   }, 0);
   // Add logic here
+});
+
+//Hide post Event
+document.getElementById('post-container').addEventListener('click', function(event) {
+  // Check if the clicked element is a button with the specified class
+  if (event.target.classList.contains('hide-post')) {
+    // Get the element below the clicked button
+    var elementBelowButton = event.target.nextElementSibling;
+
+    elementBelowButton.style.display = (elementBelowButton.style.display === 'block' || elementBelowButton.style.display === '') ? 'none' : 'block';
+  }
 });
 
 document.getElementById('debugButton').addEventListener('click', function() {
