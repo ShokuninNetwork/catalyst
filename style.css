@@ -5,7 +5,7 @@ body {
 }
 
 /* Define a style for the post container */
-.post-container {
+#post-container {
     /*Math for Post Editor*/
     position: absolute;
     left: 51vw;
@@ -31,11 +31,11 @@ body {
 
     scrollbar-color: #8d5fd3 #ffffff00;
 }
-.post-container > iframe{
+#post-container > iframe{
     max-height: calc(83vh - 1rem);
 }
 
-.post-container.small {
+#post-container.small {
     left: 0;
     width: 50vw;
     transform: none;
@@ -183,10 +183,19 @@ footer {
         z-index: 7;
         transition: background-color 0.2s ease-in-out;
     }
+
+    .hide-post {
+        background-image: url('/show_BW.png');
+        background-size: 100% 100%;
+        background-repeat: no-repeat;
+        width: 2vw;
+        height: 3.5vh;
+        margin-bottom: 0.5%;
+    }
 }
 
 @media (max-width: 1079px) {
-    .post-container {
+    #post-container {
         transform: translateX(-50%);
         height: calc(72vh - 1rem);
     }
@@ -266,6 +275,15 @@ footer {
         cursor: pointer;
         z-index: 7;
         transition: background-color 0.2s ease-in-out;
+    }
+
+    .hide-post {
+        background-image: url('/show_BW.png');
+        background-size: 100% 100%;
+        background-repeat: no-repeat;
+        width: 3vw;
+        height: 1.5vh;
+        margin-bottom: 0.5%;
     }
 
     footer{
