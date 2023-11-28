@@ -447,11 +447,13 @@ document.getElementById("inkwell").addEventListener('signalingMessage', async (e
 //Hide post Event
 document.getElementById('post-container').addEventListener('click', function(event) {
   // Check if the clicked element is a button with the specified class
-  if (event.target.classList.contains('hide-post')) {
+  if (event.target.classList.contains('hide-post') || event.target.classList.contains('show-post')) {
     // Get the element below the clicked button
     var elementBelowButton = event.target.nextElementSibling;
 
     elementBelowButton.style.display = (elementBelowButton.style.display === 'block' || elementBelowButton.style.display === '') ? 'none' : 'block';
+    console.log(event.target.classList.contains('hide-post') );
+    event.target.classList.toggle(event.target.classList.contains('hide-post') ? 'show-post' : 'hide-post');
   }
 });
 
