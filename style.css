@@ -185,7 +185,15 @@ footer {
     }
 
     .hide-post {
-        background-image: url('/show_BW.png');
+        background-image: url("/hide_BW.png");
+        background-size: 100% 100%;
+        background-repeat: no-repeat;
+        width: 2vw;
+        height: 3.5vh;
+        margin-bottom: 0.5%;
+    }
+    .show-post {
+        background-image: url("/show_BW.png");
         background-size: 100% 100%;
         background-repeat: no-repeat;
         width: 2vw;
@@ -278,6 +286,14 @@ footer {
     }
 
     .hide-post {
+        background-image: url('/hide_BW.png');
+        background-size: 100% 100%;
+        background-repeat: no-repeat;
+        width: 3vw;
+        height: 1.5vh;
+        margin-bottom: 0.5%;
+    }
+    .show-post {
         background-image: url('/show_BW.png');
         background-size: 100% 100%;
         background-repeat: no-repeat;
