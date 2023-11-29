@@ -53,10 +53,18 @@ function postConstructor(postObject) {
   container.appendChild(title);
   container.appendChild(author);
 
-  //Hide button
+  //Button zone, zoning laws mandate all post buttons to be delimited in this zone
+  const buttonZone = document.createElement('div');
+  buttonZone.classList.add("buttonZone");
+  container.appendChild(buttonZone);
+  //HideShow/ button
   const hide = document.createElement('button');
   hide.classList.add('hide-post');
-  container.appendChild(hide);
+  buttonZone.appendChild(hide);
+  //Verify/Revoke Button
+  const verify = document.createElement('button');
+  verify.classList.add('verify');
+  buttonZone.appendChild(verify);
 
   // Create iframe
   const post = document.createElement('iframe');
@@ -449,7 +457,7 @@ document.getElementById('post-container').addEventListener('click', function(eve
   // Check if the clicked element is a button with the specified class
   if (event.target.classList.contains('hide-post') || event.target.classList.contains('show-post')) {
     // Get the element below the clicked button
-    var elementBelowButton = event.target.nextElementSibling;
+    var elementBelowButton = event.target.parentElement.nextElementSibling;
 
     elementBelowButton.style.display = (elementBelowButton.style.display === 'block' || elementBelowButton.style.display === '') ? 'none' : 'block';
 
@@ -522,13 +530,15 @@ async function anchorMethod(anchor) {
 
   return responsePromise;
 };
-//signalling messages hidden
-//New button Verify, turns Author to aka and Verify instead of unverify
+
+//New button Verify//Done
+//->turns Author to aka and Verify instead of unverify
 //signing NO LONGER OPTIONAL
 //New button Reference button for referencing posts
 //Buttons looking nicer and having disabled support
 //links in frames... [1] [2]...[N] 
 //-> Only show messages inted for you.
 //Identity/fact attestation and local user beliefs. Basically an updoot for authors
+//redo icons without raster
 //auto height for iframes
 //check for local storage restrictions, permission security features.
