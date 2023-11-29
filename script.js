@@ -36,12 +36,14 @@ function postRenderer(postContentElement, postContent, flag="0") {
       : (postContentElement.innerHTML = postContent);*/
 }
 function postConstructor(postObject) {
+
   // Create container element for title and author (in main DOM)
   const container = document.createElement('div');
   const title = document.createElement('div');
   const author = document.createElement('div');
 
-  container.classList.add('post');
+  //Signaling message check
+  container.classList.add(postObject.title === "[Signal] Signaling details" ? 'signal' : 'post');
   title.classList.add('post-title');
   author.classList.add('post-author');
 
@@ -81,16 +83,15 @@ function postConstructor(postObject) {
         cntDocument.body.appendChild(content);
 
         cntDocument.body.setAttribute('onload', 'sendHeightToParent()');
-        
         // Create a script element to send height ideal size to parent to modify.
         const scriptElement = cntDocument.createElement('script');
-        scriptElement.textContent = `
+        scriptElement.innerHTML = `
           function sendHeightToParent() {
             // Get the height of the content
             const height = document.body.scrollHeight;
 
             // Send a message to the parent with the height
-            parent.postMessage({ height }, '*');
+            parent.postMessage({ height }, '${window.location.origin}');
           }
         `;
 
@@ -130,7 +131,6 @@ async function appendPost(postID) {
   const postObject = await response.json();
   postObject.postID = postID;
   const post = postConstructor(postObject);
-  console.log(post);
   const postsStartMarker = document.getElementById('posts-start-marker');
   postContainer.insertBefore(post, postsStartMarker.nextSibling);
 
@@ -452,7 +452,7 @@ document.getElementById('post-container').addEventListener('click', function(eve
     var elementBelowButton = event.target.nextElementSibling;
 
     elementBelowButton.style.display = (elementBelowButton.style.display === 'block' || elementBelowButton.style.display === '') ? 'none' : 'block';
-    console.log(event.target.classList.contains('hide-post') );
+
     event.target.classList.toggle(event.target.classList.contains('hide-post') ? 'show-post' : 'hide-post');
   }
 });
@@ -522,9 +522,13 @@ async function anchorMethod(anchor) {
 
   return responsePromise;
 };
-
-//check for local storage restrictions, permission security features.
-//allow UI to support hiding messages.
 //signalling messages hidden
+//New button Verify, turns Author to aka and Verify instead of unverify
+//signing NO LONGER OPTIONAL
+//New button Reference button for referencing posts
+//Buttons looking nicer and having disabled support
+//links in frames... [1] [2]...[N] 
 //-> Only show messages inted for you.
-//Identity/fact attestation and local user beliefs. Basically an updoot for authors for 
+//Identity/fact attestation and local user beliefs. Basically an updoot for authors
+//auto height for iframes
+//check for local storage restrictions, permission security features.
