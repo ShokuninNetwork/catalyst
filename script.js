@@ -69,7 +69,7 @@ function postConstructor(postObject) {
   // Create iframe
   const post = document.createElement('iframe');
   post.classList.add('postframe');
-  post.src = "about:blank";
+  post.src = `about:${postObject.postID}`;
 
   post.onload = function() {
     const cntWindow = post.contentWindow;
@@ -90,17 +90,20 @@ function postConstructor(postObject) {
         // Append content to the iframe's body
         cntDocument.body.appendChild(content);
 
-        cntDocument.body.setAttribute('onload', 'sendHeightToParent()');
         // Create a script element to send height ideal size to parent to modify.
         const scriptElement = cntDocument.createElement('script');
         scriptElement.innerHTML = `
-          function sendHeightToParent() {
-            // Get the height of the content
+        // Function to send iframe height to the parent window
+        function sendHeightToParent() {
             const height = document.body.scrollHeight;
+            window.parent.postMessage({ iframeHeight: height }, '*');
+        }
 
-            // Send a message to the parent with the height
-            parent.postMessage({ height }, '${window.location.origin}');
-          }
+        // Attach an event listener to the resize event
+        window.addEventListener('resize', sendHeightToParent);
+
+        // Initially send the height to the parent
+        sendHeightToParent();
         `;
 
         // Append the script element to the body of the iframe's document
@@ -117,12 +120,10 @@ function postConstructor(postObject) {
   post.signature = postObject.signature;
 
   window.addEventListener('message', function(event) {
-    // Ensure that the message is from a trusted source
-    // if (event.origin !== 'http://your-iframe-domain.com') return;
-    console.log("Beanz" + event.data.height);
-    // Adjust the height of the iframe
-    const iframe = document.getElementById(post.id);
-    iframe.style.height = event.data.height + 'px';
+    if (event.data.iframeHeight) {
+      const iframe = document.getElementById(post.id);
+      iframe.style.height = event.data.iframeHeight + 'px';
+    }
   });
 
   container.appendChild(post); // Append the iframe to the container
@@ -454,14 +455,20 @@ document.getElementById("inkwell").addEventListener('signalingMessage', async (e
 
 //Hide post Event
 document.getElementById('post-container').addEventListener('click', function(event) {
-  // Check if the clicked element is a button with the specified class
+  // Check wich button has been pressed
   if (event.target.classList.contains('hide-post') || event.target.classList.contains('show-post')) {
     // Get the element below the clicked button
-    var elementBelowButton = event.target.parentElement.nextElementSibling;
+    let elementBelowButton = event.target.parentElement.nextElementSibling;
 
     elementBelowButton.style.display = (elementBelowButton.style.display === 'block' || elementBelowButton.style.display === '') ? 'none' : 'block';
 
     event.target.classList.toggle(event.target.classList.contains('hide-post') ? 'show-post' : 'hide-post');
+  }
+  if (event.target.classList.contains('verify') || event.target.classList.contains('revoke')){
+    let elementAboveButton = event.target.parentElement.previousElementSibling;
+
+    //elementAboveButton.
+
   }
 });
 
